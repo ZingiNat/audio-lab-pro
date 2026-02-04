@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AudioLab Pro | Профессиональные аудио инструменты</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&family=Teko:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        /* Глобальные стили */
+        :root {
+            --bg-dark: #1A1D24;
+            --bg-card: #2A2F3A;
+            --text-light: #EAEAEA;
+            --text-white: #FFFFFF;
+            --accent-cyan: #00F2FE;
+            --accent-fuchsia: #EC4899;
+            --accent-lime: #BEF264;
+            --accent-blue: #3B82F6;
+            --border-glow: rgba(0, 242, 254, 0.3);
+            --shadow-glow: 0 0 15px rgba(0, 242, 254, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto Condensed', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding-top: 70px; /* Отступ для фиксированной шапки */
+        }
+
+        /* КОМПАКТНАЯ ФИКСИРОВАННАЯ ШАПКА */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(26, 29, 36, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-glow);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            padding: 0.8rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 70px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-family: 'Teko', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-fuchsia));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            white-space: nowrap;
+        }
+
+        /* Кнопка меню для мобильных */
+        .menu-toggle {
+            display: none;
+            background: transparent;
+            border: none;
+            color: var(--accent-cyan);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+        }
+
+        /* Компактная навигация */
+        .tabs {
+            display: flex;
+            gap: 0.3rem;
+            align-items: center;
+        }
+
+        .tab-btn {
+            background: rgba(42, 47, 58, 0.7);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            color: var(--text-light);
+            padding: 0.5rem 1rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            background: rgba(0, 242, 254, 0.1);
+            border-color: var(--accent-cyan);
+            transform: translateY(-1px);
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+            color: var(--bg-dark);
+            border-color: var(--accent-cyan);
+            font-weight: 600;
+        }
+
+        /* Кнопка открытия в новой вкладке */
+        .open-new-tab {
+            background: transparent;
+            border: 1px solid var(--accent-lime);
+            color: var(--accent-lime);
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.8rem;
+            cursor: pointer;
+            margin-left: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .open-new-tab:hover {
+            background: rgba(190, 242, 100, 0.1);
+            box-shadow: 0 0 10px rgba(190, 242, 100, 0.3);
+        }
+
+        /* Основной контент */
+        .main-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* Секции (скрываем неактивные) */
+        .tab-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .tab-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Карточки секций */
+        .section {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(0, 242, 254, 0.1);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .section h2 {
+            font-family: 'Teko', sans-serif;
+            font-size: 2.2rem;
+            color: var(--accent-cyan);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid rgba(0, 242, 254, 0.3);
+            padding-bottom: 0.5rem;
+        }
+
+        .section h3 {
+            font-family: 'Teko', sans-serif;
+            font-size: 1.8rem;
+            color: var(--accent-lime);
+            margin: 1.5rem 0 1rem;
+        }
+
+        /* Главная страница */
+        .intro-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .tool-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 1.5rem;
+            border-left: 4px solid var(--accent-fuchsia);
+            transition: transform 0.3s ease;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-5px);
+            border-left-color: var(--accent-cyan);
+        }
+
+        .tool-card h4 {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.4rem;
+            color: var(--text-white);
+            margin-bottom: 0.8rem;
+        }
+
+        .tool-card p {
+            color: var(--text-light);
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+
+        /* Стили для генератора частот */
+        .generator-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .control-group label {
+            display: block;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-lime);
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            -webkit-appearance: none;
+            margin-bottom: 0.5rem;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--accent-cyan), var(--accent-blue));
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--accent-cyan), var(--accent-blue));
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+        }
+
+        .value-display {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--accent-cyan);
+            text-align: center;
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            border: 1px solid rgba(0, 242, 254, 0.2);
+        }
+
+        .buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .btn-tone {
+            background: linear-gradient(45deg, var(--accent-blue), #4f46e5);
+            color: white;
+        }
+
+        .btn-tone:hover {
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-tone.active {
+            background: linear-gradient(45deg, var(--accent-fuchsia), #db2777);
+        }
+
+        .btn-noise {
+            background: linear-gradient(45deg, #10b981, #059669);
+            color: white;
+        }
+
+        .btn-noise:hover {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-noise.active {
+            background: linear-gradient(45deg, var(--accent-fuchsia), #db2777);
+        }
+
+        .btn-stop {
+            background: linear-gradient(45deg, #ef4444, #dc2626);
+            color: white;
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .btn-stop:hover {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* Стили для симулятора кроссовера */
+        .crossover-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .crossover-controls {
+            flex: 1;
+            min-width: 320px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 242, 254, 0.2);
+        }
+
+        .crossover-charts {
+            flex: 2;
+            min-width: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .chart-container {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            height: 350px;
+            position: relative;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+
+        .preset-btn {
+            flex: 1;
+            padding: 0.8rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            color: var(--text-light);
+            transition: 0.2s;
+        }
+
+        .preset-btn.active {
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+            color: var(--bg-dark);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-row {
+            margin-bottom: 1rem;
+        }
+
+        .control-row label {
+            display: flex;
+            justify-content: space-between;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-light);
+        }
+
+        .control-row .value {
+            color: var(--accent-cyan);
+            font-weight: bold;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            background: rgba(255, 243, 205, 0.1);
+            padding: 1rem;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 238, 186, 0.1);
+        }
+
+        .info-box {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            background: rgba(248, 249, 250, 0.1);
+            padding: 0.8rem;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        /* Стили для калькулятора SPL */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-lime);
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 6px;
+            color: var(--text-white);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+        }
+
+        .btn-calculate {
+            background: linear-gradient(90deg, var(--accent-fuchsia), var(--accent-cyan));
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 1rem;
+            width: 100%;
+        }
+
+        .btn-calculate:hover {
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .result-box {
+            background: linear-gradient(135deg, rgba(0, 242, 254, 0.1), rgba(236, 72, 153, 0.1));
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            text-align: center;
+        }
+
+        .result-box h4 {
+            font-family: 'Teko', sans-serif;
+            font-size: 1.8rem;
+            color: var(--accent-cyan);
+            margin-bottom: 0.8rem;
+        }
+
+        .result-value {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 2rem;
+            color: var(--accent-lime);
+            font-weight: 600;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 1100px) {
+            .crossover-layout {
+                flex-direction: column;
+            }
+            
+            .crossover-charts {
+                min-width: 100%;
+            }
+            
+            .chart-container {
+                height: 300px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding-top: 60px;
+            }
+            
+            .header {
+                height: 60px;
+                padding: 0.5rem 1rem;
+            }
+            
+            .logo {
+                font-size: 1.5rem;
+            }
+            
+            /* Мобильное меню */
+            .menu-toggle {
+                display: block;
+            }
+            
+            .tabs {
+                position: fixed;
+                top: 60px;
+                left: 0;
+                right: 0;
+                background: rgba(26, 29, 36, 0.98);
+                backdrop-filter: blur(20px);
+                flex-direction: column;
+                padding: 1rem;
+                gap: 0.5rem;
+                border-bottom: 1px solid var(--border-glow);
+                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+                transform: translateY(-100%);
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s ease;
+                z-index: 999;
+            }
+            
+            .tabs.active {
+                transform: translateY(0);
+                opacity: 1;
+                visibility: visible;
+            }
+            
+            .tab-btn {
+                width: 100%;
+                text-align: center;
+                padding: 0.8rem;
+            }
+            
+            .open-new-tab {
+                margin-left: 0;
+                margin-top: 0.5rem;
+                width: 100%;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .section {
+                padding: 1.5rem;
+            }
+            
+            .section h2 {
+                font-size: 1.8rem;
+            }
+            
+            .chart-container {
+                height: 250px;
+                padding: 1rem;
+            }
+            
+            .generator-controls, .calculator-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding-top: 55px;
+            }
+            
+            .header {
+                height: 55px;
+            }
+            
+            .logo {
+                font-size: 1.3rem;
+            }
+            
+            .section {
+                padding: 1rem;
+            }
+            
+            .section h2 {
+                font-size: 1.6rem;
+            }
+            
+            .buttons-container {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- КОМПАКТНАЯ ФИКСИРОВАННАЯ ШАПКА -->
+    <header class="header">
+        <div class="header-left">
+            <button class="menu-toggle" id="menuToggle">☰</button>
+            <div class="logo">AUDIO LAB PRO</div>
+        </div>
+        
+        <nav class="tabs" id="navTabs">
+            <button class="tab-btn active" data-tab="home">Главная</button>
+            <button class="tab-btn" data-tab="generator">Генератор</button>
+            <button class="tab-btn" data-tab="crossover">Кроссовер</button>
+            <button class="tab-btn" data-tab="calculator">Калькулятор</button>
+            <button class="open-new-tab" id="openNewTab">Открыть в новой вкладке</button>
+        </nav>
+    </header>
+
+    <!-- Основной контент -->
+    <main class="main-content">
+        <!-- Главная страница -->
+        <section id="home" class="tab-section active">
+            <div class="section">
+                <h2>Добро пожаловать в AudioLab Pro</h2>
+                <p>AudioLab Pro — это комплекс профессиональных инструментов для работы со звуком. Здесь вы найдете всё необходимое для анализа, моделирования и генерации аудиосигналов.</p>
+                
+                <h3>Доступные инструменты</h3>
+                <div class="intro-grid">
+                    <div class="tool-card">
+                        <h4>ГЕНЕРАТОР ЧАСТОТ</h4>
+                        <p>Генерируйте чистые тоны и различные типы шумов (белый, розовый, коричневый). Идеально для тестирования аудиооборудования, калибровки и аудиоэкспериментов.</p>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <h4>СИМУЛЯТОР КРОССОВЕРА</h4>
+                        <p>Моделируйте активные и пассивные кроссоверы. Анализируйте АЧХ, ФЧХ и импеданс. Поддерживает фильтры Линквица-Райли, Баттерворта и Бесселя.</p>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <h4>КАЛЬКУЛЯТОР ЗВУКОВОГО ДАВЛЕНИЯ</h4>
+                        <p>Рассчитывайте уровень звукового давления (SPL) на основе мощности акустической системы, чувствительности и расстояния до слушателя.</p>
+                    </div>
+                    
+                    <div class="tool-card">
+                        <h4>ПРОФЕССИОНАЛЬНЫЙ АНАЛИЗ</h4>
+                        <p>Все инструменты используют точные алгоритмы и обеспечивают детальную визуализацию результатов в реальном времени.</p>
+                    </div>
+                </div>
+                
+                <h3>Как использовать</h3>
+                <p>Выберите нужный инструмент в верхнем меню. Каждый инструмент имеет интуитивно понятный интерфейс с возможностью регулировки параметров в реальном времени и мгновенным отображением результатов.</p>
+                
+                <div class="info-box" style="margin-top: 2rem;">
+                    <strong>Технические особенности:</strong> Все расчеты выполняются непосредственно в браузере с использованием JavaScript. Графики строятся с помощью библиотеки Chart.js. Для генерации звука используется Web Audio API.
+                </div>
+            </div>
+        </section>
+
+        <!-- Генератор частот и шумов -->
+        <section id="generator" class="tab-section">
+            <div class="section">
+                <h2>ГЕНЕРАТОР ЧАСТОТ И ШУМОВ</h2>
+                <p>Генератор тональных сигналов и различных типов шумов для тестирования аудиосистем.</p>
+                
+                <div class="generator-controls">
+                    <div>
+                        <h3>🎵 ГЕНЕРАТОР ТОНОВ</h3>
+                        <div class="control-group">
+                            <label for="frequency">Частота (Гц):</label>
+                            <input type="range" id="frequency" min="20" max="20000" value="440" step="1">
+                            <div class="value-display" id="frequencyDisplay">440 Гц</div>
+                        </div>
+                        
+                        <div class="buttons-container">
+                            <button class="btn btn-tone" id="playTone">Играть тон</button>
+                            <button class="btn btn-tone" id="stopTone">Остановить</button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3>🌊 ГЕНЕРАТОР ШУМОВ</h3>
+                        <p>Выберите тип шума для генерации:</p>
+                        
+                        <div class="buttons-container">
+                            <button class="btn btn-noise" id="whiteNoise">Белый шум</button>
+                            <button class="btn btn-noise" id="pinkNoise">Розовый шум</button>
+                            <button class="btn btn-noise" id="brownNoise">Коричневый шум</button>
+                        </div>
+                        
+                        <button class="btn btn-stop" id="stopNoise">Остановить шум</button>
+                    </div>
+                    
+                    <div>
+                        <h3>🔊 ГРОМКОСТЬ</h3>
+                        <div class="control-group">
+                            <label for="volume">Уровень громкости:</label>
+                            <input type="range" id="volume" min="0" max="100" value="50" step="1">
+                            <div class="value-display" id="volumeDisplay">50%</div>
+                        </div>
+                        
+                        <div class="info-box">
+                            <strong>Примечание:</strong> Белый шум имеет равномерную спектральную плотность. Розовый шум имеет спад 3 дБ/октаву. Коричневый шум имеет спад 6 дБ/октаву.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Симулятор кроссовера -->
+        <section id="crossover" class="tab-section">
+            <div class="section">
+                <h2>СИМУЛЯТОР КРОССОВЕРА</h2>
+                <p>Моделирование активных и пассивных кроссоверов с анализом АЧХ, ФЧХ и импеданса.</p>
+                
+                <div class="preset-buttons">
+                    <button class="preset-btn active" onclick="setCrossoverMode('LR')">Linkwitz-Riley</button>
+                    <button class="preset-btn" onclick="setCrossoverMode('BW')">Butterworth</button>
+                    <button class="preset-btn" onclick="setCrossoverMode('Bessel')">Bessel</button>
+                </div>
+                
+                <div class="toggle-group">
+                    <input type="checkbox" id="lock-components" checked onchange="updateCrossoverCalc()">
+                    <span><b>Привязать компоненты к частоте</b><br><small>Автоматический расчет при изменении частоты</small></span>
+                </div>
+                
+                <div class="crossover-layout">
+                    <div class="crossover-controls">
+                        <div class="control-row">
+                            <label>Частота раздела (Hz): <span id="disp-freq" class="value">2500</span></label>
+                            <input type="range" id="freq" min="500" max="5000" step="50" value="2500" oninput="onFreqChange()">
+                        </div>
+                        
+                        <h3 style="margin-top: 1.5rem; color: var(--accent-cyan);">ВЧ Секция (Tweeter)</h3>
+                        
+                        <div class="control-row">
+                            <label>Импеданс динамика (Re): <span class="value">8 Ом</span></label>
+                        </div>
+                        
+                        <div class="control-row">
+                            <label>Ослабление (L-Pad): <span id="disp-att" class="value">-8.0 dB</span></label>
+                            <input type="range" id="att" min="0" max="20" step="0.5" value="8.0" oninput="updateCrossoverCalc()">
+                            <div class="info-box" id="lpad-vals">R_ser: --, R_par: --</div>
+                        </div>
+                        
+                        <div class="control-row">
+                            <label>Конденсатор C2 (uF): <span id="disp-c2" class="value">--</span></label>
+                            <input type="range" id="c2" min="0.1" max="30" step="0.1" oninput="onComponentChange()">
+                        </div>
+                        
+                        <div class="control-row">
+                            <label>Катушка L2 (mH): <span id="disp-l2" class="value">--</span></label>
+                            <input type="range" id="l2" min="0.05" max="5.0" step="0.01" oninput="onComponentChange()">
+                        </div>
+                        
+                        <h3 style="margin-top: 1.5rem; color: var(--accent-lime);">НЧ Секция (Woofer)</h3>
+                        
+                        <div class="control-row">
+                            <label>Катушка L1 (mH): <span id="disp-l1" class="value">--</span></label>
+                            <input type="range" id="l1" min="0.05" max="5.0" step="0.01" oninput="onComponentChange()">
+                        </div>
+                        
+                        <div class="control-row">
+                            <label>Конденсатор C1 (uF): <span id="disp-c1" class="value">--</span></label>
+                            <input type="range" id="c1" min="0.1" max="30" step="0.1" oninput="onComponentChange()">
+                        </div>
+                        
+                        <div class="toggle-group" style="margin-top: 1.5rem;">
+                            <input type="checkbox" id="invert-tw" checked onchange="updateCrossoverCalc()">
+                            <span><b>Инверсия фазы ВЧ</b></span>
+                        </div>
+                    </div>
+                    
+                    <div class="crossover-charts">
+                        <div class="chart-container">
+                            <canvas id="splChart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="phaseImpChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Калькулятор звукового давления -->
+        <section id="calculator" class="tab-section">
+            <div class="section">
+                <h2>КАЛЬКУЛЯТОР ЗВУКОВОГО ДАВЛЕНИЯ (SPL)</h2>
+                <p>Расчет уровня звукового давления на заданном расстоянии от акустической системы.</p>
+                
+                <div class="calculator-grid">
+                    <div>
+                        <div class="input-group">
+                            <label for="power">Мощность акустической системы (Вт):</label>
+                            <input type="number" id="power" step="any" min="0" placeholder="Например: 100" value="100">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="sensitivity">Чувствительность (дБ/Вт/м):</label>
+                            <input type="number" id="sensitivity" step="any" min="0" placeholder="Например: 90" value="90">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="distance">Расстояние до слушателя (м):</label>
+                            <input type="number" id="distance" step="any" min="0.1" placeholder="Например: 5" value="5">
+                        </div>
+                        
+                        <button class="btn-calculate" onclick="calculateSPL()">РАССЧИТАТЬ SPL</button>
+                    </div>
+                    
+                    <div>
+                        <div class="result-box">
+                            <h4>РЕЗУЛЬТАТ</h4>
+                            <div id="splResult">
+                                <p>Введите параметры и нажмите "Рассчитать SPL"</p>
+                            </div>
+                        </div>
+                        
+                        <div class="info-box" style="margin-top: 1.5rem;">
+                            <strong>Формула расчета:</strong><br>
+                            SPL = Чувствительность + 10×log₁₀(Мощность) - 20×log₁₀(Расстояние)
+                        </div>
+                        
+                        <div class="info-box" style="margin-top: 1rem;">
+                            <strong>Справочная информация:</strong><br>
+                            • Шепот: ~30 дБ<br>
+                            • Обычный разговор: ~60 дБ<br>
+                            • Уличный шум: ~80 дБ<br>
+                            • Концерт: 100-120 дБ<br>
+                            • Болевой порог: ~130 дБ
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // =================== ОБЩИЕ ФУНКЦИИ ===================
+        
+        // Переключение мобильного меню
+        const menuToggle = document.getElementById('menuToggle');
+        const navTabs = document.getElementById('navTabs');
+        
+        if (menuToggle && navTabs) {
+            menuToggle.addEventListener('click', () => {
+                navTabs.classList.toggle('active');
+            });
+            
+            // Закрытие меню при клике на ссылку
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) {
+                        navTabs.classList.remove('active');
+                    }
+                });
+            });
+            
+            // Закрытие меню при клике вне его
+            document.addEventListener('click', (e) => {
+                if (!navTabs.contains(e.target) && !menuToggle.contains(e.target)) {
+                    navTabs.classList.remove('active');
+                }
+            });
+        }
+        
+        // Открытие текущей вкладки в новом окне
+        const openNewTabBtn = document.getElementById('openNewTab');
+        if (openNewTabBtn) {
+            openNewTabBtn.addEventListener('click', () => {
+                // Создаем отдельную страницу для текущего инструмента
+                const currentTab = document.querySelector('.tab-section.active');
+                const tabId = currentTab.id;
+                
+                // Сохраняем состояние текущей вкладки
+                localStorage.setItem('audioLabActiveTab', tabId);
+                
+                // Открываем новое окно с главной страницей
+                const newWindow = window.open(window.location.href, '_blank');
+                
+                // Сообщаем новому окну, какую вкладку открыть
+                setTimeout(() => {
+                    if (newWindow) {
+                        newWindow.localStorage.setItem('audioLabActiveTab', tabId);
+                    }
+                }, 500);
+            });
+        }
+        
+        // Проверяем, нужно ли открыть определенную вкладку (при загрузке из localStorage)
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTab = localStorage.getItem('audioLabActiveTab');
+            if (savedTab && savedTab !== 'home') {
+                // Находим кнопку для этой вкладки
+                const tabBtn = document.querySelector(`.tab-btn[data-tab="${savedTab}"]`);
+                if (tabBtn) {
+                    tabBtn.click();
+                }
+                // Очищаем сохраненное значение
+                localStorage.removeItem('audioLabActiveTab');
+            }
+        });
+        
+        // Переключение вкладок
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Убираем активный класс у всех кнопок
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                // Добавляем активный класс текущей кнопке
+                btn.classList.add('active');
+                
+                // Скрываем все секции
+                document.querySelectorAll('.tab-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Показываем нужную секцию
+                const tabId = btn.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+                
+                // Если переключаемся на кроссовер, обновляем графики
+                if (tabId === 'crossover' && typeof updateCrossoverCalc === 'function') {
+                    setTimeout(updateCrossoverCalc, 100);
+                }
+                
+                // Прокручиваем к началу секции
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        });
+        
+        // =================== ГЕНЕРАТОР ЧАСТОТ ===================
+        
+        let audioContext;
+        let oscillator;
+        let gainNode;
+        let noiseSource;
+        let noiseGainNode;
+        let isPlaying = false;
+        let currentNoiseType = null;
+        
+        // Инициализация аудио контекста
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+                
+                noiseGainNode = audioContext.createGain();
+                noiseGainNode.connect(audioContext.destination);
+            }
+        }
+        
+        // Элементы DOM генератора
+        const frequencySlider = document.getElementById('frequency');
+        const frequencyDisplay = document.getElementById('frequencyDisplay');
+        const volumeSlider = document.getElementById('volume');
+        const volumeDisplay = document.getElementById('volumeDisplay');
+        const playToneBtn = document.getElementById('playTone');
+        const stopToneBtn = document.getElementById('stopTone');
+        const whiteNoiseBtn = document.getElementById('whiteNoise');
+        const pinkNoiseBtn = document.getElementById('pinkNoise');
+        const brownNoiseBtn = document.getElementById('brownNoise');
+        const stopNoiseBtn = document.getElementById('stopNoise');
+        
+        // Обновление отображения частоты
+        if (frequencySlider) {
+            frequencySlider.addEventListener('input', (e) => {
+                const freq = e.target.value;
+                frequencyDisplay.textContent = `${freq} Гц`;
+                if (oscillator && isPlaying) {
+                    oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                }
+            });
+        }
+        
+        // Обновление громкости
+        if (volumeSlider) {
+            volumeSlider.addEventListener('input', (e) => {
+                const volume = e.target.value;
+                volumeDisplay.textContent = `${volume}%`;
+                const gainValue = volume / 100 * 0.3; // Ограничиваем максимальную громкость
+                
+                if (gainNode) {
+                    gainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);
+                }
+                if (noiseGainNode) {
+                    noiseGainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);
+                }
+            });
+        }
+        
+        // Функции для тонов
+        function startTone() {
+            initAudio();
+            
+            if (oscillator) {
+                oscillator.stop();
+            }
+            
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(frequencySlider.value, audioContext.currentTime);
+            
+            const volume = volumeSlider.value / 100 * 0.3;
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            
+            oscillator.connect(gainNode);
+            oscillator.start();
+            
+            isPlaying = true;
+            playToneBtn.classList.add('active');
+        }
+        
+        function stopTone() {
+            if (oscillator) {
+                oscillator.stop();
+                oscillator = null;
+                isPlaying = false;
+                playToneBtn.classList.remove('active');
+            }
+        }
+        
+        // Генераторы шума
+        function createWhiteNoise() {
+            const bufferSize = 2 * audioContext.sampleRate;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+        
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+        
+            return noiseBuffer;
+        }
+        
+        function createPinkNoise() {
+            const bufferSize = 2 * audioContext.sampleRate;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            let b0, b1, b2, b3, b4, b5, b6;
+            b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+        
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
+                output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                output[i] *= 0.11;
+                b6 = white * 0.115926;
+            }
+        
+            return noiseBuffer;
+        }
+        
+        function createBrownNoise() {
+            const bufferSize = 2 * audioContext.sampleRate;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            let lastOut = 0.0;
+        
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 3.5;
+            }
+        
+            return noiseBuffer;
+        }
+        
+        function playNoise(type) {
+            initAudio();
+            stopNoise();
+            
+            let noiseBuffer;
+            switch(type) {
+                case 'white':
+                    noiseBuffer = createWhiteNoise();
+                    whiteNoiseBtn.classList.add('active');
+                    break;
+                case 'pink':
+                    noiseBuffer = createPinkNoise();
+                    pinkNoiseBtn.classList.add('active');
+                    break;
+                case 'brown':
+                    noiseBuffer = createBrownNoise();
+                    brownNoiseBtn.classList.add('active');
+                    break;
+            }
+        
+            noiseSource = audioContext.createBufferSource();
+            noiseSource.buffer = noiseBuffer;
+            noiseSource.loop = true;
+            
+            const volume = volumeSlider.value / 100 * 0.3;
+            noiseGainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            
+            noiseSource.connect(noiseGainNode);
+            noiseSource.start();
+            
+            currentNoiseType = type;
+        }
+        
+        function stopNoise() {
+            if (noiseSource) {
+                noiseSource.stop();
+                noiseSource = null;
+            }
+            
+            whiteNoiseBtn.classList.remove('active');
+            pinkNoiseBtn.classList.remove('active');
+            brownNoiseBtn.classList.remove('active');
+            currentNoiseType = null;
+        }
+        
+        // Event listeners для генератора
+        if (playToneBtn) {
+            playToneBtn.addEventListener('click', startTone);
+            stopToneBtn.addEventListener('click', stopTone);
+            whiteNoiseBtn.addEventListener('click', () => playNoise('white'));
+            pinkNoiseBtn.addEventListener('click', () => playNoise('pink'));
+            brownNoiseBtn.addEventListener('click', () => playNoise('brown'));
+            stopNoiseBtn.addEventListener('click', stopNoise);
+        }
+        
+        // Остановка всех звуков при закрытии страницы
+        window.addEventListener('beforeunload', () => {
+            stopTone();
+            stopNoise();
+        });
+        
+        // =================== СИМУЛЯТОР КРОССОВЕРА ===================
+        
+        // 1. Math Core (Complex Numbers)
+        class Complex {
+            constructor(re, im) { this.re = re; this.im = im; }
+            add(o) { return new Complex(this.re + o.re, this.im + o.im); }
+            sub(o) { return new Complex(this.re - o.re, this.im - o.im); }
+            mult(o) { return new Complex(this.re * o.re - this.im * o.im, this.re * o.im + this.im * o.re); }
+            div(o) {
+                const den = o.re * o.re + o.im * o.im;
+                if (den === 0) return new Complex(0,0);
+                return new Complex((this.re * o.re + this.im * o.im) / den, (this.im * o.re - this.re * o.im) / den);
+            }
+            abs() { return Math.sqrt(this.re * this.re + this.im * this.im); }
+            phase() { return Math.atan2(this.im, this.re) * (180 / Math.PI); }
+        }
+        
+        const jwL = (L_mH, f) => new Complex(0, 2 * Math.PI * f * (L_mH / 1000));
+        const jwC_inv = (C_uF, f) => new Complex(0, -1 / (2 * Math.PI * f * (C_uF / 1e6)));
+        const par = (Z1, Z2) => Z1.mult(Z2).div(Z1.add(Z2));
+        
+        // 2. Simulation Logic
+        let currentCrossoverMode = 'LR';
+        const R_load = 8; // Simplified resistive load
+        
+        function calculateSystem(freqs, params) {
+            const { L1, C1, L2, C2, Att, Invert } = params;
+            
+            // L-Pad Calcs
+            const k = Math.pow(10, Att/20);
+            const R_ser = R_load * (1 - 1/k);
+            const R_par = (k > 1.01) ? R_load * (1 / (k - 1)) : 100000; // Avoid div by zero
+        
+            const data = { freq: [], spl_lp: [], spl_hp: [], spl_sum: [], phase_lp: [], phase_hp: [], imp: [] };
+        
+            freqs.forEach(f => {
+                // --- LOW PASS SECTION ---
+                // Circuit: Source -> L1 -> Node -> (C1 || Load)
+                const Z_L1 = jwL(L1, f);
+                const Z_C1 = jwC_inv(C1, f);
+                const Z_W = new Complex(R_load, 0); // Woofer Load
+                
+                const Z_LP_Par = par(Z_C1, Z_W); // Parallel C1 and Woofer
+                const Z_LP_Total = Z_L1.add(Z_LP_Par); // Total Input Z of LP section
+                
+                // Transfer Function H_LP = V_out / V_in = Z_Par / (Z_L1 + Z_Par)
+                const H_LP = Z_LP_Par.div(Z_LP_Total);
+        
+                // --- HIGH PASS SECTION ---
+                // Circuit: Source -> C2 -> Node -> (L2 || (R_ser + (R_par || Tweeter)))
+                // First, calc effective load of Tweeter + L-Pad
+                const Z_T = new Complex(R_load, 0);
+                const Z_Rpar = new Complex(R_par, 0);
+                const Z_Rser = new Complex(R_ser, 0);
+                
+                // Tweeter || R_par
+                const Z_T_net = par(Z_T, Z_Rpar);
+                // + R_ser
+                const Z_Load_Eff = Z_Rser.add(Z_T_net);
+        
+                const Z_C2 = jwC_inv(C2, f);
+                const Z_L2 = jwL(L2, f);
+                
+                // L2 || Effective Load
+                const Z_HP_Par = par(Z_L2, Z_Load_Eff);
+                const Z_HP_Total = Z_C2.add(Z_HP_Par); // Total Input Z of HP section
+                
+                // Transfer H_HP_Filter = Z_HP_Par / (Z_C2 + Z_HP_Par)
+                let H_HP = Z_HP_Par.div(Z_HP_Total);
+                
+                // Now account for voltage drop inside L-Pad
+                // V_tweeter = V_filter_out * (Z_T_net / (R_ser + Z_T_net))
+                const H_LPad = Z_T_net.div(Z_Load_Eff);
+                H_HP = H_HP.mult(H_LPad);
+        
+                // Invert Polarity if checked
+                if (Invert) {
+                    H_HP = new Complex(-H_HP.re, -H_HP.im);
+                }
+        
+                // --- SUMMATION ---
+                const H_Sum = H_LP.add(H_HP);
+        
+                // --- TOTAL IMPEDANCE (Parallel Connection at Amp) ---
+                const Z_System = par(Z_LP_Total, Z_HP_Total);
+        
+                // Store Data
+                data.freq.push(f);
+                data.spl_lp.push(20 * Math.log10(H_LP.abs() + 1e-9));
+                data.spl_hp.push(20 * Math.log10(H_HP.abs() + 1e-9));
+                data.spl_sum.push(20 * Math.log10(H_Sum.abs() + 1e-9));
+                
+                data.phase_lp.push(H_LP.phase());
+                data.phase_hp.push(H_HP.phase());
+                
+                data.imp.push(Z_System.abs());
+            });
+        
+            return { data, R_ser, R_par };
+        }
+        
+        // 3. UI Interactions
+        const crossoverInputs = {
+            freq: document.getElementById('freq'),
+            att: document.getElementById('att'),
+            c2: document.getElementById('c2'),
+            l2: document.getElementById('l2'),
+            l1: document.getElementById('l1'),
+            c1: document.getElementById('c1'),
+            lock: document.getElementById('lock-components'),
+            invert: document.getElementById('invert-tw')
+        };
+        
+        const crossoverDisplays = {
+            freq: document.getElementById('disp-freq'),
+            att: document.getElementById('disp-att'),
+            c2: document.getElementById('disp-c2'),
+            l2: document.getElementById('disp-l2'),
+            l1: document.getElementById('disp-l1'),
+            c1: document.getElementById('disp-c1'),
+            lpad: document.getElementById('lpad-vals')
+        };
+        
+        function setCrossoverMode(mode) {
+            currentCrossoverMode = mode;
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            crossoverInputs.lock.checked = true; // Force lock when preset clicked
+            updateCrossoverCalc();
+        }
+        
+        function onFreqChange() {
+            updateCrossoverCalc();
+        }
+        
+        function onComponentChange() {
+            crossoverInputs.lock.checked = false; // User touched slider -> unlock
+            updateCrossoverCalc();
+        }
+        
+        function getStandardValues(f, R, type) {
+            let L, C;
+            // Basic formulas for 2nd order
+            if (type === 'LR') { // Q=0.5
+                L = R / (Math.PI * f) * 1000; 
+                C = 1 / (4 * Math.PI * f * R) * 1e6;
+            } else if (type === 'BW') { // Q=0.707
+                L = (R * Math.sqrt(2)) / (2 * Math.PI * f) * 1000;
+                C = 1 / (Math.sqrt(2) * Math.PI * f * R) * 1e6;
+            } else { // Bessel (approx)
+                L = (R / (2 * Math.PI * f * 0.577)) * 1000; 
+                C = 1 / (2 * Math.PI * f * R * 1.73) * 1e6;
+            }
+            return { L, C };
+        }
+        
+        function updateCrossoverCalc() {
+            const freq = parseFloat(crossoverInputs.freq.value);
+            crossoverDisplays.freq.textContent = freq;
+            const att = parseFloat(crossoverInputs.att.value);
+            crossoverDisplays.att.textContent = "-" + att.toFixed(1) + " dB";
+        
+            let L1, C1, L2, C2;
+        
+            if (crossoverInputs.lock.checked) {
+                // Auto-calculate components
+                const vals = getStandardValues(freq, R_load, currentCrossoverMode);
+                L1 = vals.L; C1 = vals.C;
+                L2 = vals.L; C2 = vals.C;
+        
+                // Update range inputs
+                crossoverInputs.l1.value = L1; crossoverInputs.c1.value = C1;
+                crossoverInputs.l2.value = L2; crossoverInputs.c2.value = C2;
+            } else {
+                // Read from inputs
+                L1 = parseFloat(crossoverInputs.l1.value);
+                C1 = parseFloat(crossoverInputs.c1.value);
+                L2 = parseFloat(crossoverInputs.l2.value);
+                C2 = parseFloat(crossoverInputs.c2.value);
+            }
+        
+            // Display values
+            crossoverDisplays.l1.textContent = L1.toFixed(2);
+            crossoverDisplays.c1.textContent = C1.toFixed(2);
+            crossoverDisplays.l2.textContent = L2.toFixed(2);
+            crossoverDisplays.c2.textContent = C2.toFixed(2);
+        
+            // Run Sim
+            const freqs = [];
+            for(let i=20; i<=20000; i*=1.1) freqs.push(i);
+            
+            const res = calculateSystem(freqs, { L1, C1, L2, C2, Att: att, Invert: crossoverInputs.invert.checked });
+        
+            // Update L-Pad Text
+            crossoverDisplays.lpad.textContent = `L-Pad Резисторы: Посл = ${res.R_ser.toFixed(2)} Ом, Парал = ${res.R_par.toFixed(2)} Ом`;
+        
+            // Draw
+            drawCrossoverCharts(res.data);
+        }
+        
+        // 4. Chart.js Config для кроссовера
+        let splChartInstance = null;
+        let phaseImpChartInstance = null;
+        
+        function drawCrossoverCharts(data) {
+            // SPL Chart
+            const ctxSpl = document.getElementById('splChart').getContext('2d');
+            if (splChartInstance) splChartInstance.destroy();
+            
+            splChartInstance = new Chart(ctxSpl, {
+                type: 'line',
+                data: {
+                    labels: data.freq.map(f => Math.round(f)),
+                    datasets: [
+                        { 
+                            label: 'НЧ (Woofer)', 
+                            data: data.spl_lp, 
+                            borderColor: '#ef4444', 
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2, 
+                            pointRadius: 0,
+                            tension: 0.2
+                        },
+                        { 
+                            label: 'ВЧ (Tweeter)', 
+                            data: data.spl_hp, 
+                            borderColor: '#3b82f6', 
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2, 
+                            pointRadius: 0,
+                            tension: 0.2
+                        },
+                        { 
+                            label: 'Сумма', 
+                            data: data.spl_sum, 
+                            borderColor: '#00f2fe', 
+                            borderDash: [5,5], 
+                            borderWidth: 3, 
+                            pointRadius: 0,
+                            tension: 0.2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            type: 'logarithmic', 
+                            min: 100, 
+                            max: 20000, 
+                            title: {
+                                display:true, 
+                                text:'Частота (Hz)',
+                                color: '#eaeaea'
+                            }, 
+                            grid: {
+                                color: 'rgba(255,255,255,0.1)'
+                            },
+                            ticks: { 
+                                color: '#eaeaea',
+                                callback: function(value) { 
+                                    return [100,500,1000,2000,5000,10000].includes(value)?value:''; 
+                                } 
+                            } 
+                        },
+                        y: { 
+                            min: -40, 
+                            max: 10, 
+                            title: {
+                                display:true, 
+                                text:'SPL (dB)',
+                                color: '#eaeaea'
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.1)'
+                            },
+                            ticks: {
+                                color: '#eaeaea'
+                            }
+                        }
+                    },
+                    plugins: { 
+                        legend: {
+                            labels: {
+                                color: '#eaeaea'
+                            }
+                        },
+                        title: { 
+                            display: true, 
+                            text: 'Амплитудно-частотная характеристика (SPL)',
+                            color: '#00f2fe',
+                            font: {
+                                size: 16
+                            }
+                        } 
+                    },
+                    animation: false
+                }
+            });
+        
+            // Phase & Impedance Chart
+            const ctxPI = document.getElementById('phaseImpChart').getContext('2d');
+            if (phaseImpChartInstance) phaseImpChartInstance.destroy();
+        
+            phaseImpChartInstance = new Chart(ctxPI, {
+                type: 'line',
+                data: {
+                    labels: data.freq.map(f => Math.round(f)),
+                    datasets: [
+                        { 
+                            label: 'Фаза НЧ', 
+                            data: data.phase_lp, 
+                            borderColor: '#ef4444', 
+                            borderWidth: 1, 
+                            pointRadius: 0,
+                            yAxisID: 'y_phase', 
+                            borderDash: [2,2]
+                        },
+                        { 
+                            label: 'Фаза ВЧ', 
+                            data: data.phase_hp, 
+                            borderColor: '#3b82f6', 
+                            borderWidth: 1, 
+                            pointRadius: 0,
+                            yAxisID: 'y_phase', 
+                            borderDash: [2,2]
+                        },
+                        { 
+                            label: 'Импеданс (Ом)', 
+                            data: data.imp, 
+                            borderColor: '#10b981', 
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 3, 
+                            pointRadius: 0,
+                            yAxisID: 'y_imp', 
+                            tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            type: 'logarithmic', 
+                            min: 100, 
+                            max: 20000, 
+                            grid: {
+                                color: 'rgba(255,255,255,0.1)'
+                            },
+                            ticks: { 
+                                color: '#eaeaea',
+                                callback: function(value) { 
+                                    return [100,500,1000,2000,5000,10000].includes(value)?value:''; 
+                                } 
+                            } 
+                        },
+                        y_phase: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'left', 
+                            min: -180, 
+                            max: 180, 
+                            title: {
+                                display:true, 
+                                text:'Фаза (Градусы)',
+                                color: '#eaeaea'
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.1)'
+                            },
+                            ticks: {
+                                color: '#eaeaea'
+                            }
+                        },
+                        y_imp: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'right', 
+                            min: 0, 
+                            max: 30, 
+                            title: {
+                                display:true, 
+                                text:'Импеданс (Ом)',
+                                color: '#eaeaea'
+                            }, 
+                            grid: {
+                                drawOnChartArea: false,
+                                color: 'rgba(255,255,255,0.1)'
+                            },
+                            ticks: {
+                                color: '#eaeaea'
+                            }
+                        }
+                    },
+                    plugins: { 
+                        legend: {
+                            labels: {
+                                color: '#eaeaea'
+                            }
+                        },
+                        title: { 
+                            display: true, 
+                            text: 'Импеданс и Фаза',
+                            color: '#00f2fe',
+                            font: {
+                                size: 16
+                            }
+                        } 
+                    },
+                    animation: false
+                }
+            });
+        }
+        
+        // Инициализация кроссовера при загрузке
+        if (document.getElementById('freq')) {
+            // Устанавливаем начальные значения для ползунков
+            crossoverInputs.l1.min = 0.05;
+            crossoverInputs.l1.max = 5.0;
+            crossoverInputs.l1.step = 0.01;
+            
+            crossoverInputs.c1.min = 0.1;
+            crossoverInputs.c1.max = 30;
+            crossoverInputs.c1.step = 0.1;
+            
+            crossoverInputs.l2.min = 0.05;
+            crossoverInputs.l2.max = 5.0;
+            crossoverInputs.l2.step = 0.01;
+            
+            crossoverInputs.c2.min = 0.1;
+            crossoverInputs.c2.max = 30;
+            crossoverInputs.c2.step = 0.1;
+            
+            // Запускаем начальный расчет
+            setTimeout(updateCrossoverCalc, 500);
+        }
+        
+        // =================== КАЛЬКУЛЯТОР SPL ===================
+        
+        function calculateSPL() {
+            const power = parseFloat(document.getElementById('power').value);
+            const sensitivity = parseFloat(document.getElementById('sensitivity').value);
+            const distance = parseFloat(document.getElementById('distance').value);
+            const resultDiv = document.getElementById('splResult');
+        
+            if (isNaN(power) || isNaN(sensitivity) || isNaN(distance) || distance <= 0) {
+                resultDiv.innerHTML = '<p style="color: #ef4444;">Пожалуйста, введите корректные значения.</p>';
+                return;
+            }
+        
+            // Звуковое давление (SPL) = Чувствительность + 10 * log10(Мощность) - 20 * log10(Расстояние)
+            const spl = sensitivity + 10 * Math.log10(power) - 20 * Math.log10(distance);
+            
+            // Определяем уровень громкости
+            let volumeLevel = "";
+            if (spl < 40) volumeLevel = "Очень тихо (шепот)";
+            else if (spl < 60) volumeLevel = "Тихий разговор";
+            else if (spl < 80) volumeLevel = "Обычный разговор";
+            else if (spl < 100) volumeLevel = "Громко (уличный шум)";
+            else if (spl < 120) volumeLevel = "Очень громко (концерт)";
+            else volumeLevel = "Экстремально громко (болевой порог)";
+        
+            resultDiv.innerHTML = `
+                <div class="result-value">${spl.toFixed(2)} дБ</div>
+                <p>на расстоянии ${distance} м</p>
+                <p style="margin-top: 1rem; color: #bef264;"><strong>Уровень громкости:</strong> ${volumeLevel}</p>
+                <p style="margin-top: 0.5rem; font-size: 0.9rem;">
+                    При мощности: ${power} Вт<br>
+                    Чувствительность: ${sensitivity} дБ/Вт/м
+                </p>
+            `;
+        }
+        
+        // Инициализация калькулятора при загрузке
+        if (document.getElementById('power')) {
+            // Устанавливаем начальные значения
+            document.getElementById('power').value = 100;
+            document.getElementById('sensitivity').value = 90;
+            document.getElementById('distance').value = 5;
+            
+            // Выполняем первоначальный расчет
+            setTimeout(calculateSPL, 500);
+        }
+        
+        // =================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===================
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Активируем первую вкладку
+            document.querySelector('.tab-btn.active').click();
+            
+            // Настройка начальных значений для генератора
+            if (frequencySlider) {
+                frequencySlider.value = 440;
+                frequencyDisplay.textContent = "440 Гц";
+            }
+            
+            if (volumeSlider) {
+                volumeSlider.value = 50;
+                volumeDisplay.textContent = "50%";
+            }
+            
+            // Автоматически скрываем меню на мобильных после выбора
+            if (window.innerWidth <= 768) {
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        setTimeout(() => {
+                            navTabs.classList.remove('active');
+                        }, 300);
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>
