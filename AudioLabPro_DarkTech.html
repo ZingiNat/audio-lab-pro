@@ -1,0 +1,1794 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Lab Pro - Профессиональная Лаборатория Звука</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ========================================
+           CORE VARIABLES - Dark Tech Theme
+        ======================================== */
+        :root {
+            /* Background Colors */
+            --bg-primary: #1A1D24;
+            --bg-secondary: #2A2F3A;
+            --bg-tertiary: #353B48;
+            
+            /* Text Colors */
+            --text-primary: #EAEAEA;
+            --text-secondary: #B0B8C3;
+            --text-white: #FFFFFF;
+            
+            /* Accent Colors - Neon Tech */
+            --accent-cyan: #00F2FE;
+            --accent-pink: #EC4899;
+            --accent-lime: #BEF264;
+            --accent-purple: #A78BFA;
+            --accent-orange: #FB923C;
+            
+            /* Gradients */
+            --gradient-primary: linear-gradient(135deg, var(--accent-cyan), var(--accent-pink));
+            --gradient-secondary: linear-gradient(135deg, var(--accent-purple), var(--accent-orange));
+            
+            /* Shadows & Glows */
+            --glow-cyan: 0 0 20px rgba(0, 242, 254, 0.3);
+            --glow-pink: 0 0 20px rgba(236, 72, 153, 0.3);
+            --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.4);
+            
+            /* Transitions */
+            --transition-fast: 0.2s ease;
+            --transition-smooth: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ========================================
+           RESET & BASE STYLES
+        ======================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto Condensed', 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ========================================
+           HEADER & NAVIGATION
+        ======================================== */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 2px solid var(--accent-cyan);
+            padding: 1.5rem 2rem;
+            box-shadow: var(--shadow-elevated);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: 2px;
+            text-shadow: var(--glow-cyan);
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { filter: drop-shadow(0 0 5px rgba(0, 242, 254, 0.5)); }
+            50% { filter: drop-shadow(0 0 15px rgba(0, 242, 254, 0.8)); }
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-family: 'IBM Plex Mono', monospace;
+            letter-spacing: 1px;
+        }
+
+        /* Tab Navigation */
+        .tab-navigation {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            background: var(--bg-primary);
+            padding: 0.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--bg-tertiary);
+        }
+
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            background: transparent;
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Roboto Condensed', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            transition: all var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-btn:hover {
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .tab-btn.active {
+            background: var(--gradient-primary);
+            color: var(--text-white);
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+            font-weight: 700;
+        }
+
+        .tab-btn.active::before {
+            content: '▸';
+            position: absolute;
+            left: 8px;
+            animation: slide-arrow 1s ease-in-out infinite;
+        }
+
+        @keyframes slide-arrow {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(4px); }
+        }
+
+        /* ========================================
+           MAIN CONTAINER
+        ======================================== */
+        .main-container {
+            max-width: 1600px;
+            margin: 2rem auto;
+            padding: 0 2rem 2rem;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ========================================
+           SECTION STYLES
+        ======================================== */
+        .section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-elevated);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            height: 2px;
+            background: var(--gradient-primary);
+            animation: border-flow 3s linear infinite;
+        }
+
+        @keyframes border-flow {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-white);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--accent-cyan);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .section-title .icon {
+            font-size: 1.8rem;
+            filter: drop-shadow(var(--glow-cyan));
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: var(--accent-cyan);
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        /* ========================================
+           CONTROL ELEMENTS
+        ======================================== */
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .control-value {
+            color: var(--accent-cyan);
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 700;
+            font-size: 1.1rem;
+            text-shadow: var(--glow-cyan);
+        }
+
+        /* Range Sliders */
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: linear-gradient(to right, 
+                var(--accent-cyan) 0%, 
+                var(--accent-pink) 50%, 
+                var(--accent-purple) 100%);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            box-shadow: 0 0 15px var(--accent-cyan), 0 0 5px var(--accent-pink);
+            transition: all var(--transition-fast);
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 25px var(--accent-cyan), 0 0 10px var(--accent-pink);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 15px var(--accent-cyan);
+        }
+
+        /* Input Fields */
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-primary);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 8px;
+            color: var(--text-white);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+            transition: all var(--transition-fast);
+        }
+
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--accent-pink);
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.3);
+        }
+
+        select option {
+            background: var(--bg-secondary);
+            color: var(--text-white);
+        }
+
+        /* Checkboxes */
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--accent-purple);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+
+        .checkbox-wrapper:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            accent-color: var(--accent-cyan);
+        }
+
+        .checkbox-wrapper label {
+            cursor: pointer;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* ========================================
+           BUTTONS
+        ======================================== */
+        .btn {
+            padding: 0.9rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-family: 'Roboto Condensed', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all var(--transition-smooth);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-primary {
+            background: var(--gradient-primary);
+            color: var(--text-white);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 30px rgba(0, 242, 254, 0.6);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-white);
+            border: 2px solid var(--accent-pink);
+        }
+
+        .btn-secondary:hover {
+            background: var(--accent-pink);
+            box-shadow: var(--glow-pink);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            color: var(--text-white);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-stop:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+        }
+
+        .btn.active {
+            background: var(--gradient-secondary);
+            box-shadow: 0 0 25px rgba(167, 139, 250, 0.5);
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        /* ========================================
+           LAYOUT GRIDS
+        ======================================== */
+        .two-column-layout {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+
+        .three-column-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        /* ========================================
+           CHARTS
+        ======================================== */
+        .chart-container {
+            position: relative;
+            height: 450px;
+            background: var(--bg-primary);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* ========================================
+           INFO CARDS
+        ======================================== */
+        .info-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--accent-purple);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all var(--transition-smooth);
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        .info-card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-family: 'IBM Plex Mono', monospace;
+            text-shadow: var(--glow-cyan);
+            margin-bottom: 0.5rem;
+        }
+
+        .info-card-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ========================================
+           RESULT DISPLAY
+        ======================================== */
+        .result-box {
+            background: var(--bg-primary);
+            border: 2px solid var(--accent-lime);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1.2rem;
+            color: var(--accent-lime);
+            text-align: center;
+            font-weight: 700;
+            box-shadow: 0 0 20px rgba(190, 242, 100, 0.2);
+            animation: result-appear 0.5s ease-out;
+        }
+
+        @keyframes result-appear {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* ========================================
+           HINTS & INFO
+        ======================================== */
+        .hint-box {
+            background: var(--bg-tertiary);
+            border-left: 4px solid var(--accent-orange);
+            padding: 1rem 1.25rem;
+            margin-top: 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .hint-box strong {
+            color: var(--accent-orange);
+        }
+
+        /* ========================================
+           PRESET BUTTONS
+        ======================================== */
+        .preset-row {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--bg-tertiary);
+        }
+
+        .preset-btn {
+            flex: 1;
+            padding: 0.75rem;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all var(--transition-fast);
+        }
+
+        .preset-btn:hover {
+            color: var(--accent-cyan);
+            border-color: var(--accent-cyan);
+        }
+
+        .preset-btn.active {
+            background: var(--gradient-primary);
+            color: var(--text-white);
+            border-color: var(--accent-cyan);
+            box-shadow: var(--glow-cyan);
+        }
+
+        /* ========================================
+           RESPONSIVE DESIGN
+        ======================================== */
+        @media (max-width: 1024px) {
+            .two-column-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .tab-navigation {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 0 1rem 1rem;
+            }
+
+            .section {
+                padding: 1.5rem;
+            }
+
+            .logo {
+                font-size: 1.4rem;
+            }
+
+            .tab-btn {
+                padding: 0.6rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .button-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-container {
+                height: 350px;
+                padding: 1rem;
+            }
+        }
+
+        /* ========================================
+           SCROLLBAR STYLING
+        ======================================== */
+        ::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-cyan);
+            border-radius: 6px;
+            box-shadow: var(--glow-cyan);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-pink);
+        }
+
+        /* ========================================
+           UTILITY CLASSES
+        ======================================== */
+        .text-center { text-align: center; }
+        .mb-1 { margin-bottom: 1rem; }
+        .mb-2 { margin-bottom: 2rem; }
+        .mt-1 { margin-top: 1rem; }
+        .mt-2 { margin-top: 2rem; }
+        
+        .glow-text {
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .full-width {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- ========================================
+         HEADER & NAVIGATION
+    ======================================== -->
+    <header class="header">
+        <div class="header-content">
+            <div>
+                <div class="logo">⚡ AUDIO LAB PRO</div>
+                <div class="subtitle">Professional Audio Engineering Suite</div>
+            </div>
+            <nav class="tab-navigation">
+                <button class="tab-btn active" onclick="switchTab('generator')">
+                    🎵 Генератор
+                </button>
+                <button class="tab-btn" onclick="switchTab('crossover-v2')">
+                    📊 Кроссовер Pro
+                </button>
+                <button class="tab-btn" onclick="switchTab('crossover-ultra')">
+                    🔬 Кроссовер Ultra
+                </button>
+                <button class="tab-btn" onclick="switchTab('calculator')">
+                    🧮 Калькулятор SPL
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ========================================
+         MAIN CONTENT AREA
+    ======================================== -->
+    <main class="main-container">
+        
+        <!-- TAB 1: FREQUENCY & NOISE GENERATOR -->
+        <div id="tab-generator" class="tab-content active">
+            <div class="three-column-grid">
+                <!-- Tone Generator Section -->
+                <div class="section">
+                    <h2 class="section-title">
+                        <span class="icon">🎶</span>
+                        Генератор Тонов
+                    </h2>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Частота (Гц)</span>
+                            <span class="control-value" id="freq-display">440</span>
+                        </div>
+                        <input type="range" id="freq-slider" min="0" max="24000" value="440" step="1">
+                    </div>
+                    <div class="button-grid">
+                        <button class="btn btn-primary" id="play-tone">▶ Играть</button>
+                        <button class="btn btn-stop" id="stop-tone">⏹ Стоп</button>
+                    </div>
+                </div>
+
+                <!-- Noise Generator Section -->
+                <div class="section">
+                    <h2 class="section-title">
+                        <span class="icon">🌊</span>
+                        Генератор Шумов
+                    </h2>
+                    <div class="button-grid">
+                        <button class="btn btn-secondary" id="white-noise">Белый</button>
+                        <button class="btn btn-secondary" id="pink-noise">Розовый</button>
+                        <button class="btn btn-secondary" id="brown-noise">Коричневый</button>
+                    </div>
+                    <button class="btn btn-stop full-width mt-1" id="stop-noise">⏹ Остановить</button>
+                </div>
+
+                <!-- Volume Control Section -->
+                <div class="section">
+                    <h2 class="section-title">
+                        <span class="icon">🔊</span>
+                        Громкость
+                    </h2>
+                    <div class="control-group">
+                        <div class="control-label">
+                            <span>Уровень</span>
+                            <span class="control-value" id="volume-display">50%</span>
+                        </div>
+                        <input type="range" id="volume-slider" min="0" max="100" value="50" step="1">
+                    </div>
+                    <div class="hint-box">
+                        <strong>Совет:</strong> Начинайте с низкой громкости для защиты слуха и оборудования.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: CROSSOVER V2 -->
+        <div id="tab-crossover-v2" class="tab-content">
+            <div class="two-column-layout">
+                <!-- Controls Panel -->
+                <div>
+                    <div class="section">
+                        <h2 class="section-title">
+                            <span class="icon">⚙️</span>
+                            Настройки
+                        </h2>
+                        
+                        <!-- Preset Buttons -->
+                        <div class="preset-row">
+                            <button class="preset-btn active" onclick="setModeV2('LR')">Linkwitz-Riley</button>
+                            <button class="preset-btn" onclick="setModeV2('BW')">Butterworth</button>
+                            <button class="preset-btn" onclick="setModeV2('Bessel')">Bessel</button>
+                        </div>
+
+                        <!-- Lock Components -->
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="lock-components-v2" checked onchange="updateCalcV2()">
+                            <label for="lock-components-v2">
+                                <strong>Привязать компоненты к частоте</strong><br>
+                                <small>Авто-расчет при движении ползунка</small>
+                            </label>
+                        </div>
+
+                        <!-- Crossover Frequency -->
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Частота раздела (Hz)</span>
+                                <span class="control-value" id="disp-freq-v2">2500</span>
+                            </div>
+                            <input type="range" id="freq-v2" min="500" max="5000" step="50" value="2500" oninput="onFreqChangeV2()">
+                        </div>
+                    </div>
+
+                    <!-- Tweeter Section -->
+                    <div class="section">
+                        <h2 class="section-subtitle">ВЧ Секция (Tweeter)</h2>
+                        
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="invert-tw-v2" checked onchange="updateCalcV2()">
+                            <label for="invert-tw-v2">Инверсия фазы</label>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Ослабление (L-Pad)</span>
+                                <span class="control-value" id="disp-att-v2">-8.0 dB</span>
+                            </div>
+                            <input type="range" id="att-v2" min="0" max="20" step="0.5" value="8.0" oninput="updateCalcV2()">
+                            <div class="hint-box" id="lpad-vals-v2">R_ser: --, R_par: --</div>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Конденсатор C2 (uF)</span>
+                                <span class="control-value" id="disp-c2-v2">--</span>
+                            </div>
+                            <input type="range" id="c2-v2" min="0.1" max="30" step="0.1" oninput="onComponentChangeV2()">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Катушка L2 (mH)</span>
+                                <span class="control-value" id="disp-l2-v2">--</span>
+                            </div>
+                            <input type="range" id="l2-v2" min="0.05" max="5.0" step="0.01" oninput="onComponentChangeV2()">
+                        </div>
+                    </div>
+
+                    <!-- Woofer Section -->
+                    <div class="section">
+                        <h2 class="section-subtitle">НЧ Секция (Woofer)</h2>
+                        
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Катушка L1 (mH)</span>
+                                <span class="control-value" id="disp-l1-v2">--</span>
+                            </div>
+                            <input type="range" id="l1-v2" min="0.05" max="5.0" step="0.01" oninput="onComponentChangeV2()">
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Конденсатор C1 (uF)</span>
+                                <span class="control-value" id="disp-c1-v2">--</span>
+                            </div>
+                            <input type="range" id="c1-v2" min="0.1" max="30" step="0.1" oninput="onComponentChangeV2()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Panel -->
+                <div>
+                    <div class="chart-container">
+                        <canvas id="splChart-v2"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="phaseImpChart-v2"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: CROSSOVER ULTRA (PRO) -->
+        <div id="tab-crossover-ultra" class="tab-content">
+            <div class="two-column-layout">
+                <!-- Sidebar Controls -->
+                <div>
+                    <div class="section">
+                        <h2 class="section-title">
+                            <span class="icon">🎛️</span>
+                            Общие параметры
+                        </h2>
+                        
+                        <div class="control-group">
+                            <label class="control-label">Порядок фильтра (Крутизна спада)</label>
+                            <select id="order-ultra" onchange="updateCalcUltra()">
+                                <option value="1">1-й порядок (6 dB/oct)</option>
+                                <option value="2" selected>2-й порядок (12 dB/oct)</option>
+                                <option value="3">3-й порядок (18 dB/oct)</option>
+                                <option value="4">4-й порядок (24 dB/oct)</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="control-label">Тип аппроксимации</label>
+                            <select id="type-ultra" onchange="updateCalcUltra()">
+                                <option value="LR" selected>Linkwitz-Riley (Ровная АЧХ)</option>
+                                <option value="BW">Butterworth (Ровный импеданс 1/3 пор)</option>
+                                <option value="Bessel">Bessel (Лучший импульс)</option>
+                            </select>
+                        </div>
+
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="auto-calc-ultra" checked onchange="updateCalcUltra()">
+                            <label for="auto-calc-ultra">Авто-подбор номиналов</label>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Частота раздела (Hz)</span>
+                                <span class="control-value" id="val-freq-ultra">2500</span>
+                            </div>
+                            <input type="range" id="freq-ultra" min="100" max="10000" step="10" value="2500" oninput="updateCalcUltra()">
+                        </div>
+                    </div>
+
+                    <!-- Tweeter Section -->
+                    <div class="section">
+                        <h2 class="section-subtitle">ВЧ Секция (Tweeter)</h2>
+                        
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Delay (Задержка / Смещение)</span>
+                                <span class="control-value" id="val-delay-ultra">0.00 ms</span>
+                            </div>
+                            <input type="range" id="delay-ultra" min="0" max="2" step="0.01" value="0" oninput="updateCalcUltra()">
+                            <div style="font-size:0.75rem; color: var(--text-secondary); margin-top:0.5rem;">
+                                1 ms ≈ 34 см смещения в глубину
+                            </div>
+                        </div>
+
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>L-Pad Ослабление</span>
+                                <span class="control-value" id="val-att-ultra">-8.0 dB</span>
+                            </div>
+                            <input type="range" id="att-ultra" min="0" max="20" step="0.5" value="8" oninput="updateCalcUltra()">
+                        </div>
+
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="invert-ultra" checked onchange="updateCalcUltra()">
+                            <label for="invert-ultra">Инверсия фазы</label>
+                        </div>
+
+                        <div class="control-group">
+                            <label class="control-label">Сопротивление динамика (Re)</label>
+                            <input type="number" id="rh-ultra" value="8" onchange="updateCalcUltra()">
+                        </div>
+                    </div>
+
+                    <!-- Woofer Section -->
+                    <div class="section">
+                        <h2 class="section-subtitle">НЧ Секция (Woofer)</h2>
+                        <div class="control-group">
+                            <label class="control-label">Сопротивление динамика (Re)</label>
+                            <input type="number" id="rl-ultra" value="8" onchange="updateCalcUltra()">
+                        </div>
+                    </div>
+
+                    <div class="hint-box">
+                        <strong>Зеленая линия:</strong> Импеданс, который видит усилитель. Старайтесь избегать глубоких провалов.<br>
+                        <strong>Пунктир:</strong> Суммарная АЧХ. Провалы означают плохую фазировку или задержку.
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div>
+                    <div class="chart-container" style="height: 700px;">
+                        <canvas id="mainChart-ultra"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: SPL CALCULATOR -->
+        <div id="tab-calculator" class="tab-content">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <div class="section">
+                    <h2 class="section-title">
+                        <span class="icon">🧮</span>
+                        Калькулятор звукового давления
+                    </h2>
+                    
+                    <div class="three-column-grid">
+                        <div class="info-card">
+                            <div class="info-card-label">Мощность (Вт)</div>
+                            <input type="number" id="power-calc" step="any" min="0" placeholder="100" 
+                                   style="width: 100%; margin-top: 1rem; text-align: center; font-size: 1.5rem;">
+                        </div>
+                        
+                        <div class="info-card">
+                            <div class="info-card-label">Чувствительность (дБ @ 1м/1Вт)</div>
+                            <input type="number" id="sensitivity-calc" step="any" min="0" placeholder="90" 
+                                   style="width: 100%; margin-top: 1rem; text-align: center; font-size: 1.5rem;">
+                        </div>
+                        
+                        <div class="info-card">
+                            <div class="info-card-label">Расстояние (м)</div>
+                            <input type="number" id="distance-calc" step="any" min="0.1" placeholder="3" 
+                                   style="width: 100%; margin-top: 1rem; text-align: center; font-size: 1.5rem;">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary full-width mt-2" onclick="calculateSPL()">
+                        🔬 Рассчитать звуковое давление
+                    </button>
+
+                    <div id="result-calc"></div>
+
+                    <div class="hint-box mt-2">
+                        <strong>Формула:</strong> SPL = Чувствительность + 10×log₁₀(Мощность) - 20×log₁₀(Расстояние)<br><br>
+                        <strong>Примеры значений:</strong><br>
+                        • Домашняя акустика: 85-92 дБ чувствительность<br>
+                        • Профессиональная: 95-105 дБ<br>
+                        • Безопасный уровень: до 85 дБ длительное прослушивание
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ========================================
+         JAVASCRIPT CODE
+    ======================================== -->
+    <script>
+        /* =============================================
+           TAB SWITCHING LOGIC
+        ============================================= */
+        function switchTab(tabName) {
+            // Hide all tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active state from all buttons
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById('tab-' + tabName).classList.add('active');
+            
+            // Set active button
+            event.target.classList.add('active');
+            
+            // Initialize charts if needed
+            if (tabName === 'crossover-v2') {
+                setTimeout(updateCalcV2, 100);
+            } else if (tabName === 'crossover-ultra') {
+                setTimeout(updateCalcUltra, 100);
+            }
+        }
+
+        /* =============================================
+           TAB 1: FREQUENCY & NOISE GENERATOR
+        ============================================= */
+        let audioContext;
+        let oscillator;
+        let gainNode;
+        let noiseSource;
+        let noiseGainNode;
+        let isPlaying = false;
+        let currentNoiseType = null;
+
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+                
+                noiseGainNode = audioContext.createGain();
+                noiseGainNode.connect(audioContext.destination);
+            }
+        }
+
+        // DOM Elements
+        const freqSlider = document.getElementById('freq-slider');
+        const freqDisplay = document.getElementById('freq-display');
+        const volumeSlider = document.getElementById('volume-slider');
+        const volumeDisplay = document.getElementById('volume-display');
+        const playToneBtn = document.getElementById('play-tone');
+        const stopToneBtn = document.getElementById('stop-tone');
+        const whiteNoiseBtn = document.getElementById('white-noise');
+        const pinkNoiseBtn = document.getElementById('pink-noise');
+        const brownNoiseBtn = document.getElementById('brown-noise');
+        const stopNoiseBtn = document.getElementById('stop-noise');
+
+        // Event Listeners
+        freqSlider.addEventListener('input', (e) => {
+            const freq = e.target.value;
+            freqDisplay.textContent = freq;
+            if (oscillator && isPlaying) {
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+            }
+        });
+
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value;
+            volumeDisplay.textContent = `${volume}%`;
+            const gainValue = volume / 100 * 0.3;
+            
+            if (gainNode) {
+                gainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);
+            }
+            if (noiseGainNode) {
+                noiseGainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);
+            }
+        });
+
+        function startTone() {
+            initAudio();
+            
+            if (oscillator) {
+                oscillator.stop();
+            }
+            
+            oscillator = audioContext.createOscillator();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(freqSlider.value, audioContext.currentTime);
+            
+            const volume = volumeSlider.value / 100 * 0.3;
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            
+            oscillator.connect(gainNode);
+            oscillator.start();
+            
+            isPlaying = true;
+            playToneBtn.classList.add('active');
+        }
+
+        function stopTone() {
+            if (oscillator) {
+                oscillator.stop();
+                oscillator = null;
+                isPlaying = false;
+                playToneBtn.classList.remove('active');
+            }
+        }
+
+        // Noise Generators
+        function createWhiteNoise() {
+            const bufferSize = 2 * audioContext.sampleRate;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            return noiseBuffer;
+        }
+
+        function createPinkNoise() {
+            const bufferSize = 2 * audioContext.sampleRate;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            let b0, b1, b2, b3, b4, b5, b6;
+            b0 = b1 = b2 = b3 = b4 = b5 = b6 = 0.0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                b0 = 0.99886 * b0 + white * 0.0555179;
+                b1 = 0.99332 * b1 + white * 0.0750759;
+                b2 = 0.96900 * b2 + white * 0.1538520;
+                b3 = 0.86650 * b3 + white * 0.3104856;
+                b4 = 0.55000 * b4 + white * 0.5329522;
+                b5 = -0.7616 * b5 - white * 0.0168980;
+                output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                output[i] *= 0.11;
+                b6 = white * 0.115926;
+            }
+            return noiseBuffer;
+        }
+
+        function createBrownNoise() {
+            const bufferSize = 2 * audioContext.sampleRate;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            let lastOut = 0.0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 3.5;
+            }
+            return noiseBuffer;
+        }
+
+        function playNoise(type) {
+            initAudio();
+            stopNoise();
+            
+            let noiseBuffer;
+            switch(type) {
+                case 'white':
+                    noiseBuffer = createWhiteNoise();
+                    whiteNoiseBtn.classList.add('active');
+                    break;
+                case 'pink':
+                    noiseBuffer = createPinkNoise();
+                    pinkNoiseBtn.classList.add('active');
+                    break;
+                case 'brown':
+                    noiseBuffer = createBrownNoise();
+                    brownNoiseBtn.classList.add('active');
+                    break;
+            }
+
+            noiseSource = audioContext.createBufferSource();
+            noiseSource.buffer = noiseBuffer;
+            noiseSource.loop = true;
+            
+            const volume = volumeSlider.value / 100 * 0.3;
+            noiseGainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            
+            noiseSource.connect(noiseGainNode);
+            noiseSource.start();
+            
+            currentNoiseType = type;
+        }
+
+        function stopNoise() {
+            if (noiseSource) {
+                noiseSource.stop();
+                noiseSource = null;
+            }
+            whiteNoiseBtn.classList.remove('active');
+            pinkNoiseBtn.classList.remove('active');
+            brownNoiseBtn.classList.remove('active');
+            currentNoiseType = null;
+        }
+
+        playToneBtn.addEventListener('click', startTone);
+        stopToneBtn.addEventListener('click', stopTone);
+        whiteNoiseBtn.addEventListener('click', () => playNoise('white'));
+        pinkNoiseBtn.addEventListener('click', () => playNoise('pink'));
+        brownNoiseBtn.addEventListener('click', () => playNoise('brown'));
+        stopNoiseBtn.addEventListener('click', stopNoise);
+
+        window.addEventListener('beforeunload', () => {
+            stopTone();
+            stopNoise();
+        });
+
+        /* =============================================
+           COMPLEX NUMBER CLASS (Shared)
+        ============================================= */
+        class Complex {
+            constructor(re, im) { this.re = re; this.im = im; }
+            add(o) { return new Complex(this.re + o.re, this.im + o.im); }
+            sub(o) { return new Complex(this.re - o.re, this.im - o.im); }
+            mult(o) { return new Complex(this.re * o.re - this.im * o.im, this.re * o.im + this.im * o.re); }
+            div(o) {
+                const den = o.re * o.re + o.im * o.im;
+                if (den === 0) return new Complex(0,0);
+                return new Complex((this.re * o.re + this.im * o.im) / den, (this.im * o.re - this.re * o.im) / den);
+            }
+            abs() { return Math.sqrt(this.re * this.re + this.im * this.im); }
+            phase() { return Math.atan2(this.im, this.re) * (180 / Math.PI); }
+            rotate(angle) {
+                const cos = Math.cos(angle);
+                const sin = Math.sin(angle);
+                return new Complex(this.re * cos - this.im * sin, this.re * sin + this.im * cos);
+            }
+        }
+
+        const jwL = (L_mH, f) => new Complex(0, 2 * Math.PI * f * (L_mH / 1000));
+        const jwC_inv = (C_uF, f) => new Complex(0, -1 / (2 * Math.PI * f * (C_uF / 1e6)));
+        const par = (Z1, Z2) => Z1.mult(Z2).div(Z1.add(Z2));
+
+        /* =============================================
+           TAB 2: CROSSOVER V2 LOGIC
+        ============================================= */
+        let currentModeV2 = 'LR';
+        const R_load_v2 = 8;
+
+        function calculateSystemV2(freqs, params) {
+            const { L1, C1, L2, C2, Att, Invert } = params;
+            
+            const k = Math.pow(10, Att/20);
+            const R_ser = R_load_v2 * (1 - 1/k);
+            const R_par = (k > 1.01) ? R_load_v2 * (1 / (k - 1)) : 100000;
+
+            const data = { freq: [], spl_lp: [], spl_hp: [], spl_sum: [], phase_lp: [], phase_hp: [], imp: [] };
+
+            freqs.forEach(f => {
+                const Z_L1 = jwL(L1, f);
+                const Z_C1 = jwC_inv(C1, f);
+                const Z_W = new Complex(R_load_v2, 0);
+                
+                const Z_LP_Par = par(Z_C1, Z_W);
+                const Z_LP_Total = Z_L1.add(Z_LP_Par);
+                const H_LP = Z_LP_Par.div(Z_LP_Total);
+
+                const Z_T = new Complex(R_load_v2, 0);
+                const Z_Rpar = new Complex(R_par, 0);
+                const Z_Rser = new Complex(R_ser, 0);
+                const Z_T_net = par(Z_T, Z_Rpar);
+                const Z_Load_Eff = Z_Rser.add(Z_T_net);
+
+                const Z_C2 = jwC_inv(C2, f);
+                const Z_L2 = jwL(L2, f);
+                const Z_HP_Par = par(Z_L2, Z_Load_Eff);
+                const Z_HP_Total = Z_C2.add(Z_HP_Par);
+                
+                let H_HP = Z_HP_Par.div(Z_HP_Total);
+                const H_LPad = Z_T_net.div(Z_Load_Eff);
+                H_HP = H_HP.mult(H_LPad);
+
+                if (Invert) {
+                    H_HP = new Complex(-H_HP.re, -H_HP.im);
+                }
+
+                const H_Sum = H_LP.add(H_HP);
+                const Z_System = par(Z_LP_Total, Z_HP_Total);
+
+                data.freq.push(f);
+                data.spl_lp.push(20 * Math.log10(H_LP.abs() + 1e-9));
+                data.spl_hp.push(20 * Math.log10(H_HP.abs() + 1e-9));
+                data.spl_sum.push(20 * Math.log10(H_Sum.abs() + 1e-9));
+                data.phase_lp.push(H_LP.phase());
+                data.phase_hp.push(H_HP.phase());
+                data.imp.push(Z_System.abs());
+            });
+
+            return { data, R_ser, R_par };
+        }
+
+        const inputsV2 = {
+            freq: document.getElementById('freq-v2'),
+            att: document.getElementById('att-v2'),
+            c2: document.getElementById('c2-v2'),
+            l2: document.getElementById('l2-v2'),
+            l1: document.getElementById('l1-v2'),
+            c1: document.getElementById('c1-v2'),
+            lock: document.getElementById('lock-components-v2'),
+            invert: document.getElementById('invert-tw-v2')
+        };
+
+        const displaysV2 = {
+            freq: document.getElementById('disp-freq-v2'),
+            att: document.getElementById('disp-att-v2'),
+            c2: document.getElementById('disp-c2-v2'),
+            l2: document.getElementById('disp-l2-v2'),
+            l1: document.getElementById('disp-l1-v2'),
+            c1: document.getElementById('disp-c1-v2'),
+            lpad: document.getElementById('lpad-vals-v2')
+        };
+
+        function setModeV2(mode) {
+            currentModeV2 = mode;
+            document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            inputsV2.lock.checked = true;
+            updateCalcV2();
+        }
+
+        function onFreqChangeV2() {
+            updateCalcV2();
+        }
+
+        function onComponentChangeV2() {
+            inputsV2.lock.checked = false;
+            updateCalcV2();
+        }
+
+        function getStandardValuesV2(f, R, type) {
+            let L, C;
+            if (type === 'LR') {
+                L = R / (Math.PI * f) * 1000; 
+                C = 1 / (4 * Math.PI * f * R) * 1e6;
+            } else if (type === 'BW') {
+                L = (R * Math.sqrt(2)) / (2 * Math.PI * f) * 1000;
+                C = 1 / (Math.sqrt(2) * Math.PI * f * R) * 1e6;
+            } else {
+                L = (R / (2 * Math.PI * f * 0.577)) * 1000; 
+                C = 1 / (2 * Math.PI * f * R * 1.73) * 1e6;
+            }
+            return { L, C };
+        }
+
+        function updateCalcV2() {
+            const freq = parseFloat(inputsV2.freq.value);
+            displaysV2.freq.textContent = freq;
+            const att = parseFloat(inputsV2.att.value);
+            displaysV2.att.textContent = "-" + att.toFixed(1) + " dB";
+
+            let L1, C1, L2, C2;
+
+            if (inputsV2.lock.checked) {
+                const vals = getStandardValuesV2(freq, R_load_v2, currentModeV2);
+                L1 = vals.L; C1 = vals.C;
+                L2 = vals.L; C2 = vals.C;
+                inputsV2.l1.value = L1; inputsV2.c1.value = C1;
+                inputsV2.l2.value = L2; inputsV2.c2.value = C2;
+            } else {
+                L1 = parseFloat(inputsV2.l1.value);
+                C1 = parseFloat(inputsV2.c1.value);
+                L2 = parseFloat(inputsV2.l2.value);
+                C2 = parseFloat(inputsV2.c2.value);
+            }
+
+            displaysV2.l1.textContent = L1.toFixed(2);
+            displaysV2.c1.textContent = C1.toFixed(2);
+            displaysV2.l2.textContent = L2.toFixed(2);
+            displaysV2.c2.textContent = C2.toFixed(2);
+
+            const freqs = [];
+            for(let i=20; i<=20000; i*=1.1) freqs.push(i);
+            
+            const res = calculateSystemV2(freqs, { L1, C1, L2, C2, Att: att, Invert: inputsV2.invert.checked });
+
+            displaysV2.lpad.innerHTML = `<strong>L-Pad Резисторы:</strong> Посл = ${res.R_ser.toFixed(2)} Ом, Парал = ${res.R_par.toFixed(2)} Ом`;
+
+            drawChartsV2(res.data);
+        }
+
+        let splChartInstanceV2 = null;
+        let phaseImpChartInstanceV2 = null;
+
+        function drawChartsV2(data) {
+            const ctxSpl = document.getElementById('splChart-v2').getContext('2d');
+            if (splChartInstanceV2) splChartInstanceV2.destroy();
+            
+            splChartInstanceV2 = new Chart(ctxSpl, {
+                type: 'line',
+                data: {
+                    labels: data.freq.map(f => Math.round(f)),
+                    datasets: [
+                        { label: 'НЧ (Woofer)', data: data.spl_lp, borderColor: '#00F2FE', borderWidth: 2, pointRadius: 0, tension: 0.1 },
+                        { label: 'ВЧ (Tweeter)', data: data.spl_hp, borderColor: '#EC4899', borderWidth: 2, pointRadius: 0, tension: 0.1 },
+                        { label: 'Сумма', data: data.spl_sum, borderColor: '#BEF264', borderDash: [5,5], borderWidth: 2, pointRadius: 0, tension: 0.1 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            type: 'logarithmic', 
+                            min: 100, 
+                            max: 20000, 
+                            title: {display:true, text:'Частота (Hz)', color: '#EAEAEA'}, 
+                            ticks: { 
+                                callback: function(value) { 
+                                    return [100,500,1000,2000,5000,10000].includes(value)?value:''; 
+                                },
+                                color: '#B0B8C3'
+                            },
+                            grid: { color: '#353B48' }
+                        },
+                        y: { 
+                            min: -40, 
+                            max: 10, 
+                            title: {display:true, text:'SPL (dB)', color: '#EAEAEA'},
+                            ticks: { color: '#B0B8C3' },
+                            grid: { color: '#353B48' }
+                        }
+                    },
+                    plugins: { 
+                        title: { display: true, text: 'Амплитудно-частотная характеристика (SPL)', color: '#EAEAEA', font: {size: 16} },
+                        legend: { labels: { color: '#EAEAEA' } }
+                    },
+                    animation: false
+                }
+            });
+
+            const ctxPI = document.getElementById('phaseImpChart-v2').getContext('2d');
+            if (phaseImpChartInstanceV2) phaseImpChartInstanceV2.destroy();
+
+            phaseImpChartInstanceV2 = new Chart(ctxPI, {
+                type: 'line',
+                data: {
+                    labels: data.freq.map(f => Math.round(f)),
+                    datasets: [
+                        { 
+                            label: 'Фаза НЧ', data: data.phase_lp, borderColor: '#00F2FE', borderWidth: 1, pointRadius: 0,
+                            yAxisID: 'y_phase', borderDash: [2,2]
+                        },
+                        { 
+                            label: 'Фаза ВЧ', data: data.phase_hp, borderColor: '#EC4899', borderWidth: 1, pointRadius: 0,
+                            yAxisID: 'y_phase', borderDash: [2,2]
+                        },
+                        { 
+                            label: 'Импеданс (Ом)', data: data.imp, borderColor: '#BEF264', borderWidth: 3, pointRadius: 0,
+                            yAxisID: 'y_imp', tension: 0.3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { 
+                            type: 'logarithmic', 
+                            min: 100, 
+                            max: 20000, 
+                            ticks: { 
+                                callback: function(value) { 
+                                    return [100,500,1000,2000,5000,10000].includes(value)?value:''; 
+                                },
+                                color: '#B0B8C3'
+                            },
+                            grid: { color: '#353B48' }
+                        },
+                        y_phase: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'left', 
+                            min: -180, 
+                            max: 180, 
+                            title: {display:true, text:'Фаза (Градусы)', color: '#EAEAEA'},
+                            ticks: { color: '#B0B8C3' },
+                            grid: { color: '#353B48' }
+                        },
+                        y_imp: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'right', 
+                            min: 0, 
+                            max: 30, 
+                            title: {display:true, text:'Импеданс (Ом)', color: '#EAEAEA'}, 
+                            grid: {drawOnChartArea: false},
+                            ticks: { color: '#B0B8C3' }
+                        }
+                    },
+                    plugins: { 
+                        title: { display: true, text: 'Импеданс и Фаза', color: '#EAEAEA', font: {size: 16} },
+                        legend: { labels: { color: '#EAEAEA' } }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        /* =============================================
+           TAB 3: CROSSOVER ULTRA LOGIC
+        ============================================= */
+        const PI = Math.PI;
+        const Z_L = (L_mH, f) => new Complex(0, 2 * PI * f * (L_mH / 1000));
+        const Z_C = (C_uF, f) => new Complex(0, -1 / (2 * PI * f * (C_uF / 1e6)));
+
+        function calcLadder(f, components, R_load_val) {
+            let Z_load = new Complex(R_load_val, 0);
+            let Z_curr = Z_load;
+            
+            for (let i = components.length - 1; i >= 0; i--) {
+                const c = components[i];
+                const Z_comp = (c.kind === 'L') ? Z_L(c.val, f) : Z_C(c.val, f);
+                
+                if (c.pos === 'p') {
+                    Z_curr = par(Z_curr, Z_comp);
+                } else {
+                    Z_curr = Z_curr.add(Z_comp);
+                }
+            }
+            const Z_in_total = Z_curr;
+
+            let node_impedances = new Array(components.length).fill(null);
+            let z_temp = Z_load;
+            
+            for (let i = components.length - 1; i >= 0; i--) {
+                const c = components[i];
+                const Z_comp = (c.kind === 'L') ? Z_L(c.val, f) : Z_C(c.val, f);
+                if (c.pos === 'p') {
+                    z_temp = par(z_temp, Z_comp);
+                    node_impedances[i] = z_temp;
+                } else {
+                    node_impedances[i] = z_temp; 
+                    z_temp = z_temp.add(Z_comp);
+                }
+            }
+
+            let H_total = new Complex(1, 0);
+            for (let i = 0; i < components.length; i++) {
+                const c = components[i];
+                const Z_comp = (c.kind === 'L') ? Z_L(c.val, f) : Z_C(c.val, f);
+                
+                if (c.pos === 's') {
+                    const Z_right = node_impedances[i];
+                    const div = Z_right.div(Z_comp.add(Z_right));
+                    H_total = H_total.mult(div);
+                }
+            }
+
+            return { H: H_total, Z: Z_in_total };
+        }
+
+        function getComponents(order, type, f, R, isLowPass) {
+            const w = 2 * PI * f;
+            let k = [];
+            
+            if (type === 'BW') {
+                if (order === 1) k = [1];
+                if (order === 2) k = [1.414, 1.414];
+                if (order === 3) k = [1.0, 2.0, 1.0];
+                if (order === 4) k = [0.7654, 1.8478, 1.8478, 0.7654];
+            } else if (type === 'LR') {
+                if (order === 2) k = [2.0, 0.5]; 
+                if (order === 4) k = [1.5307, 1.5772, 1.0824, 0.3827];
+                if (order === 1 || order === 3) k = (order===1)?[1]:[1,2,1]; 
+            } else {
+                if (order === 2) k = [1.3617, 0.4539];
+                if (order === 3) k = [1.255, 0.5528, 0.1922]; 
+                if (order === 4) k = [1.0598, 0.5116, 0.3181, 0.1104];
+                if (order === 1) k = [1];
+            }
+
+            const comps = [];
+            for (let i = 0; i < order; i++) {
+                let val = 0;
+                let kind = '';
+                let pos = (i % 2 === 0) ? 's' : 'p';
+
+                if (isLowPass) {
+                    if (pos === 's') {
+                        kind = 'L';
+                        val = (k[i] * R) / w * 1000;
+                    } else {
+                        kind = 'C';
+                        val = (k[i] / (w * R)) * 1e6;
+                    }
+                } else {
+                    if (pos === 's') {
+                        kind = 'C';
+                        val = 1 / (k[i] * w * R) * 1e6;
+                    } else {
+                        kind = 'L';
+                        val = R / (k[i] * w) * 1000;
+                    }
+                }
+                comps.push({ kind, pos, val });
+            }
+            return comps;
+        }
+
+        let myChartUltra = null;
+
+        function updateCalcUltra() {
+            const order = parseInt(document.getElementById('order-ultra').value);
+            const type = document.getElementById('type-ultra').value;
+            const f_c = parseFloat(document.getElementById('freq-ultra').value);
+            const att_db = parseFloat(document.getElementById('att-ultra').value);
+            const delay_ms = parseFloat(document.getElementById('delay-ultra').value);
+            const invert = document.getElementById('invert-ultra').checked;
+            const Rh = parseFloat(document.getElementById('rh-ultra').value);
+            const Rl = parseFloat(document.getElementById('rl-ultra').value);
+
+            document.getElementById('val-freq-ultra').textContent = f_c;
+            document.getElementById('val-delay-ultra').textContent = delay_ms.toFixed(2) + " ms";
+            document.getElementById('val-att-ultra').textContent = "-" + att_db + " dB";
+
+            let compsLP = getComponents(order, type, f_c, Rl, true);
+            let compsHP = getComponents(order, type, f_c, Rh, false);
+
+            const k = Math.pow(10, att_db/20);
+            const R_ser = Rh * (1 - 1/k);
+            const R_par = (k > 1.01) ? Rh * (1 / (k - 1)) : 1e6;
+
+            const freqs = [];
+            for (let i = 10; i <= 20000; i *= 1.05) freqs.push(i);
+
+            const dataLP = [];
+            const dataHP = [];
+            const dataSum = [];
+            const dataImp = [];
+
+            freqs.forEach(f => {
+                const resLP = calcLadder(f, compsLP, Rl);
+                const H_LP = resLP.H;
+                const Z_LP = resLP.Z;
+
+                const Z_Tweeter_Load = par(new Complex(R_par,0), new Complex(Rh,0)).add(new Complex(R_ser,0));
+                const R_eff_HP = Z_Tweeter_Load.re; 
+                
+                const resHP = calcLadder(f, compsHP, R_eff_HP);
+                let H_HP = resHP.H;
+                const Z_HP = resHP.Z;
+
+                const Z_par_tw = par(new Complex(R_par,0), new Complex(Rh,0));
+                const drop = Z_par_tw.div(Z_Tweeter_Load);
+                H_HP = H_HP.mult(drop);
+
+                if (invert) H_HP = new Complex(-H_HP.re, -H_HP.im);
+
+                const theta = -2 * PI * f * (delay_ms / 1000);
+                H_HP = H_HP.rotate(theta);
+
+                const H_Sum = H_LP.add(H_HP);
+                const Z_Total = par(Z_LP, Z_HP);
+
+                dataLP.push(20 * Math.log10(H_LP.abs() + 1e-10));
+                dataHP.push(20 * Math.log10(H_HP.abs() + 1e-10));
+                dataSum.push(20 * Math.log10(H_Sum.abs() + 1e-10));
+                dataImp.push(Z_Total.abs());
+            });
+
+            drawChartUltra(freqs, dataLP, dataHP, dataSum, dataImp);
+        }
+
+        function drawChartUltra(freqs, lp, hp, sum, imp) {
+            const ctx = document.getElementById('mainChart-ultra').getContext('2d');
+            if (myChartUltra) myChartUltra.destroy();
+
+            myChartUltra = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: freqs.map(f => Math.round(f)),
+                    datasets: [
+                        { label: 'НЧ (Woofer)', data: lp, borderColor: '#00F2FE', borderWidth: 2, pointRadius: 0, yAxisID: 'y', tension: 0.1 },
+                        { label: 'ВЧ (Tweeter)', data: hp, borderColor: '#EC4899', borderWidth: 2, pointRadius: 0, yAxisID: 'y', tension: 0.1 },
+                        { label: 'Сумма', data: sum, borderColor: '#BEF264', borderWidth: 2, borderDash: [5,5], pointRadius: 0, yAxisID: 'y', tension: 0.1 },
+                        { label: 'Импеданс (Ohm)', data: imp, borderColor: '#A78BFA', borderWidth: 2, pointRadius: 0, yAxisID: 'y1', backgroundColor: 'rgba(167, 139, 250, 0.1)', fill: true }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: { 
+                            type: 'logarithmic', 
+                            min: 10, 
+                            max: 20000, 
+                            ticks: { 
+                                callback: (v) => [20,100,500,1000,5000,10000].includes(v)?v:'',
+                                color: '#B0B8C3'
+                            },
+                            grid: { color: '#353B48' }
+                        },
+                        y: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'left', 
+                            min: -50, 
+                            max: 10, 
+                            title: {display:true, text:'SPL (dB)', color: '#EAEAEA'},
+                            ticks: { color: '#B0B8C3' },
+                            grid: { color: '#353B48' }
+                        },
+                        y1: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'right', 
+                            min: 0, 
+                            max: 20, 
+                            grid: {drawOnChartArea: false}, 
+                            title: {display:true, text:'Impedance (Ω)', color: '#EAEAEA'},
+                            ticks: { color: '#B0B8C3' }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'top', labels: { color: '#EAEAEA' } },
+                        tooltip: { enabled: true }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        /* =============================================
+           TAB 4: SPL CALCULATOR
+        ============================================= */
+        function calculateSPL() {
+            const power = parseFloat(document.getElementById('power-calc').value);
+            const sensitivity = parseFloat(document.getElementById('sensitivity-calc').value);
+            const distance = parseFloat(document.getElementById('distance-calc').value);
+            const resultDiv = document.getElementById('result-calc');
+
+            if (isNaN(power) || isNaN(sensitivity) || isNaN(distance) || distance <= 0) {
+                resultDiv.innerHTML = '<div class="result-box" style="border-color: #EF4444; color: #EF4444;">⚠️ Пожалуйста, введите корректные значения</div>';
+                return;
+            }
+
+            const spl = sensitivity + 10 * Math.log10(power) - 20 * Math.log10(distance);
+
+            resultDiv.innerHTML = `
+                <div class="result-box">
+                    <div style="font-size: 3rem; margin-bottom: 0.5rem;">${spl.toFixed(2)} дБ</div>
+                    <div style="font-size: 1rem; color: var(--text-secondary);">
+                        Звуковое давление на расстоянии ${distance} м
+                    </div>
+                </div>
+            `;
+        }
+
+        /* =============================================
+           INITIALIZATION
+        ============================================= */
+        // Initialize Crossover V2 when page loads
+        setTimeout(() => {
+            updateCalcV2();
+        }, 500);
+    </script>
+</body>
+</html>
