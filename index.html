@@ -118,25 +118,6 @@
             font-weight: 600;
         }
 
-        /* Кнопка открытия в новой вкладке */
-        .open-new-tab {
-            background: transparent;
-            border: 1px solid var(--accent-lime);
-            color: var(--accent-lime);
-            padding: 0.4rem 0.8rem;
-            border-radius: 4px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.8rem;
-            cursor: pointer;
-            margin-left: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .open-new-tab:hover {
-            background: rgba(190, 242, 100, 0.1);
-            box-shadow: 0 0 10px rgba(190, 242, 100, 0.3);
-        }
-
         /* Основной контент */
         .main-content {
             max-width: 1400px;
@@ -480,6 +461,23 @@
             box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
         }
 
+                .select-control {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            border-radius: 6px;
+            color: var(--text-white);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 1rem;
+        }
+        .select-control:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+        }
+
+
         .btn-calculate {
             background: linear-gradient(90deg, var(--accent-fuchsia), var(--accent-cyan));
             color: white;
@@ -588,12 +586,6 @@
                 padding: 0.8rem;
             }
             
-            .open-new-tab {
-                margin-left: 0;
-                margin-top: 0.5rem;
-                width: 100%;
-            }
-            
             .main-content {
                 padding: 1rem;
             }
@@ -660,7 +652,6 @@
             <button class="tab-btn" data-tab="generator">Генератор</button>
             <button class="tab-btn" data-tab="crossover">Кроссовер</button>
             <button class="tab-btn" data-tab="calculator">Калькулятор</button>
-            <button class="open-new-tab" id="openNewTab">Открыть в новой вкладке</button>
         </nav>
     </header>
 
@@ -715,7 +706,7 @@
                         <h3>🎵 ГЕНЕРАТОР ТОНОВ</h3>
                         <div class="control-group">
                             <label for="frequency">Частота (Гц):</label>
-                            <input type="range" id="frequency" min="20" max="20000" value="440" step="1">
+                            <input type="range" id="frequency" min="0" max="1000" value="529" step="1">
                             <div class="value-display" id="frequencyDisplay">440 Гц</div>
                         </div>
                         
@@ -729,6 +720,17 @@
                         <h3>🌊 ГЕНЕРАТОР ШУМОВ</h3>
                         <p>Выберите тип шума для генерации:</p>
                         
+                        <div class="control-group">
+                            <label for="noiseFftSize">FFT размер (для RTA):</label>
+                            <select id="noiseFftSize" class="select-control">
+                                <option value="1024">1024</option>
+                                <option value="2048" selected>2048</option>
+                                <option value="4096">4096</option>
+                                <option value="8192">8192</option>
+                                <option value="16384">16384</option>
+                            </select>
+                        </div>
+
                         <div class="buttons-container">
                             <button class="btn btn-noise" id="whiteNoise">Белый шум</button>
                             <button class="btn btn-noise" id="pinkNoise">Розовый шум</button>
@@ -748,6 +750,48 @@
                         
                         <div class="info-box">
                             <strong>Примечание:</strong> Белый шум имеет равномерную спектральную плотность. Розовый шум имеет спад 3 дБ/октаву. Коричневый шум имеет спад 6 дБ/октаву.
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3>📈 RTA (МИКРОФОН)</h3>
+                        <p>Анализ спектра в реальном времени с микрофона (Real‑Time Analyzer).</p>
+
+                        <div class="control-group">
+                            <label for="rtaFftSize">FFT размер:</label>
+                            <select id="rtaFftSize" class="select-control">
+                                <option value="1024">1024</option>
+                                <option value="2048" selected>2048</option>
+                                <option value="4096">4096</option>
+                                <option value="8192">8192</option>
+                                <option value="16384">16384</option>
+                            </select>
+                        </div>
+
+                        <div class="control-group">
+                            <label for="rtaSmoothingOct">Сглаживание (1/n октавы):</label>
+                            <select id="rtaSmoothingOct" class="select-control">
+                                <option value="0" selected>Выкл</option>
+                                <option value="1">1</option>
+                                <option value="2">1/2</option>
+                                <option value="3">1/3</option>
+                                <option value="4">1/4</option>
+                                <option value="6">1/6</option>
+                                <option value="12">1/12</option>
+                            </select>
+                        </div>
+
+                        <div class="buttons-container">
+                            <button class="btn btn-tone" id="rtaStartMic">Старт микрофон</button>
+                            <button class="btn btn-stop" id="rtaStopMic">Стоп микрофон</button>
+                        </div>
+
+                        <div class="chart-container" style="height: 260px; margin-top: 1rem;">
+                            <canvas id="rtaChart"></canvas>
+                        </div>
+
+                        <div class="info-box">
+                            FFT размер синхронизируется с генератором шумов (см. селектор FFT в шум‑генераторе).
                         </div>
                     </div>
                 </div>
@@ -912,29 +956,6 @@
             });
         }
         
-        // Открытие текущей вкладки в новом окне
-        const openNewTabBtn = document.getElementById('openNewTab');
-        if (openNewTabBtn) {
-            openNewTabBtn.addEventListener('click', () => {
-                // Создаем отдельную страницу для текущего инструмента
-                const currentTab = document.querySelector('.tab-section.active');
-                const tabId = currentTab.id;
-                
-                // Сохраняем состояние текущей вкладки
-                localStorage.setItem('audioLabActiveTab', tabId);
-                
-                // Открываем новое окно с главной страницей
-                const newWindow = window.open(window.location.href, '_blank');
-                
-                // Сообщаем новому окну, какую вкладку открыть
-                setTimeout(() => {
-                    if (newWindow) {
-                        newWindow.localStorage.setItem('audioLabActiveTab', tabId);
-                    }
-                }, 500);
-            });
-        }
-        
         // Проверяем, нужно ли открыть определенную вкладку (при загрузке из localStorage)
         document.addEventListener('DOMContentLoaded', function() {
             const savedTab = localStorage.getItem('audioLabActiveTab');
@@ -985,7 +1006,210 @@
         let noiseGainNode;
         let isPlaying = false;
         let currentNoiseType = null;
-        
+        // =================== RTA (MIC) / ANALYSER ===================
+        let rtaStream = null;
+        let rtaSourceNode = null;
+        let rtaAnalyser = null;
+        let rtaAnimId = null;
+        let rtaChart = null;
+
+        const rtaStartBtn = document.getElementById('rtaStartMic');
+        const rtaStopBtn  = document.getElementById('rtaStopMic');
+        const rtaFftSizeSel = document.getElementById('rtaFftSize');
+        const rtaSmoothSel  = document.getElementById('rtaSmoothingOct');
+        const rtaCanvas = document.getElementById('rtaChart');
+
+        // ВАЖНО: этот селектор должен появиться у генератора шумов (см. пункт 3.4)
+        const noiseFftSizeSel = document.getElementById('noiseFftSize');
+
+        function ensureRtaChart() {
+            if (!rtaCanvas || rtaChart) return;
+
+            const ctx = rtaCanvas.getContext('2d');
+            rtaChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'RTA (dB)',
+                        data: [],
+                        borderColor: 'rgba(0, 242, 254, 1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        tension: 0.2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#EAEAEA', maxTicksLimit: 6 }, grid: { color: 'rgba(255,255,255,0.06)' } },
+                        y: { ticks: { color: '#EAEAEA' }, grid: { color: 'rgba(255,255,255,0.06)' }, suggestedMin: -120, suggestedMax: 0 }
+                    }
+                }
+            });
+        }
+
+        function setRtaFftSize(size) {
+            const s = Number(size) || 2048;
+            if (rtaAnalyser) rtaAnalyser.fftSize = s;
+            if (rtaFftSizeSel) rtaFftSizeSel.value = String(s);
+        }
+
+        // Синхронизация FFT: noise -> rta
+        if (noiseFftSizeSel) {
+            noiseFftSizeSel.addEventListener('change', () => {
+                setRtaFftSize(noiseFftSizeSel.value);
+            });
+        }
+
+        // Синхронизация FFT: rta -> noise (чтобы было “в обе стороны” — удобно)
+        if (rtaFftSizeSel && noiseFftSizeSel) {
+            rtaFftSizeSel.addEventListener('change', () => {
+                noiseFftSizeSel.value = rtaFftSizeSel.value;
+                setRtaFftSize(rtaFftSizeSel.value);
+            });
+        } else if (rtaFftSizeSel) {
+            rtaFftSizeSel.addEventListener('change', () => setRtaFftSize(rtaFftSizeSel.value));
+        }
+
+        function hzFromBin(binIndex, fftSize, sampleRate) {
+            // частота центра бин-а
+            return (binIndex * sampleRate) / fftSize;
+        }
+
+        // 1/n octave smoothing по спектру в dB (простая реализация по “скользящему” октавному окну)
+        function smooth1nOct(freqs, magsDb, n) {
+            if (!n || n <= 0) return { freqs, magsDb };
+
+            const outF = [];
+            const outM = [];
+
+            for (let i = 0; i < freqs.length; i++) {
+                const f = freqs[i];
+                if (f <= 0) continue;
+
+                const f1 = f / Math.pow(2, 1 / (2 * n));
+                const f2 = f * Math.pow(2, 1 / (2 * n));
+
+                // усредняем в линейной энергии
+                let sum = 0;
+                let cnt = 0;
+                for (let k = 0; k < freqs.length; k++) {
+                    const fk = freqs[k];
+                    if (fk >= f1 && fk <= f2) {
+                        const lin = Math.pow(10, magsDb[k] / 20); // амплитуда
+                        sum += lin;
+                        cnt++;
+                    }
+                }
+                const avgLin = cnt ? (sum / cnt) : 0;
+                const avgDb = avgLin > 0 ? (20 * Math.log10(avgLin)) : -120;
+
+                outF.push(f);
+                outM.push(avgDb);
+            }
+            return { freqs: outF, magsDb: outM };
+        }
+
+        async function startRtaMic() {
+            initAudio();
+            ensureRtaChart();
+
+            if (!navigator.mediaDevices?.getUserMedia) {
+                alert('getUserMedia не поддерживается в этом браузере.');
+                return;
+            }
+
+            // стоп, если уже запущено
+            stopRtaMic();
+
+            rtaStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            });
+
+            rtaSourceNode = audioContext.createMediaStreamSource(rtaStream);
+            rtaAnalyser = audioContext.createAnalyser();
+
+            // начальный FFT size — берём из noiseFftSizeSel если есть, иначе из rtaFftSizeSel
+            const initialFft = (noiseFftSizeSel?.value) || (rtaFftSizeSel?.value) || 2048;
+            setRtaFftSize(initialFft);
+
+            // подключение: mic -> analyser (в выход НЕ надо)
+            rtaSourceNode.connect(rtaAnalyser);
+
+            const buf = new Float32Array(rtaAnalyser.frequencyBinCount);
+
+            const draw = () => {
+                if (!rtaAnalyser || !rtaChart) return;
+
+                rtaAnalyser.getFloatFrequencyData(buf);
+
+                const fftSize = rtaAnalyser.fftSize;
+                const sr = audioContext.sampleRate;
+
+                // Ограничим диапазон до 1..24000 Гц (как просили)
+                const freqs = [];
+                const mags = [];
+
+                for (let i = 0; i < buf.length; i++) {
+                    const f = hzFromBin(i, fftSize, sr);
+                    if (f < 1 || f > 24000) continue;
+                    freqs.push(f);
+                    mags.push(buf[i]); // уже dB
+                }
+
+                const n = Number(rtaSmoothSel?.value || 0);
+                const sm = smooth1nOct(freqs, mags, n);
+
+                // Прореживание меток (чтобы chart не тормозил)
+                const step = Math.max(1, Math.floor(sm.freqs.length / 250));
+                const labels = [];
+                const data = [];
+
+                for (let i = 0; i < sm.freqs.length; i += step) {
+                    const f = sm.freqs[i];
+                    labels.push(f < 1000 ? String(Math.round(f)) : (f/1000).toFixed(1) + 'k');
+                    data.push(sm.magsDb[i]);
+                }
+
+                rtaChart.data.labels = labels;
+                rtaChart.data.datasets[0].data = data;
+                rtaChart.update('none');
+
+                rtaAnimId = requestAnimationFrame(draw);
+            };
+
+            rtaAnimId = requestAnimationFrame(draw);
+        }
+
+        function stopRtaMic() {
+            if (rtaAnimId) {
+                cancelAnimationFrame(rtaAnimId);
+                rtaAnimId = null;
+            }
+            if (rtaSourceNode) {
+                try { rtaSourceNode.disconnect(); } catch {}
+                rtaSourceNode = null;
+            }
+            rtaAnalyser = null;
+
+            if (rtaStream) {
+                rtaStream.getTracks().forEach(t => t.stop());
+                rtaStream = null;
+            }
+        }
+
+        if (rtaStartBtn) rtaStartBtn.addEventListener('click', startRtaMic);
+        if (rtaStopBtn)  rtaStopBtn.addEventListener('click', stopRtaMic);
+
+
         // Инициализация аудио контекста
         function initAudio() {
             if (!audioContext) {
@@ -1010,16 +1234,37 @@
         const brownNoiseBtn = document.getElementById('brownNoise');
         const stopNoiseBtn = document.getElementById('stopNoise');
         
-        // Обновление отображения частоты
+        // ===== ЛОГАРИФМИЧЕСКАЯ ЧАСТОТА (1 Гц .. 24 кГц) =====
+        const TONE_F_MIN = 1;
+        const TONE_F_MAX = 24000;
+        const TONE_SLIDER_MAX = 1000;
+
+        function sliderToFreq(pos) {
+            const p = Math.min(TONE_SLIDER_MAX, Math.max(0, Number(pos)));
+            const ratio = TONE_F_MAX / TONE_F_MIN;
+            return TONE_F_MIN * Math.pow(ratio, p / TONE_SLIDER_MAX);
+        }
+
+        function formatFreqHz(f) {
+            if (f < 1000) return `${Math.round(f)} Гц`;
+            return `${(f / 1000).toFixed(2)} кГц`;
+        }
+
+        // Обновление отображения частоты (лог шкала)
         if (frequencySlider) {
             frequencySlider.addEventListener('input', (e) => {
-                const freq = e.target.value;
-                frequencyDisplay.textContent = `${freq} Гц`;
+                const freq = sliderToFreq(e.target.value);
+                frequencyDisplay.textContent = formatFreqHz(freq);
                 if (oscillator && isPlaying) {
                     oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
                 }
             });
+
+            // Инициализация дисплея при загрузке
+            const initFreq = sliderToFreq(frequencySlider.value);
+            if (frequencyDisplay) frequencyDisplay.textContent = formatFreqHz(initFreq);
         }
+
         
         // Обновление громкости
         if (volumeSlider) {
@@ -1047,7 +1292,7 @@
             
             oscillator = audioContext.createOscillator();
             oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(frequencySlider.value, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(sliderToFreq(frequencySlider.value), audioContext.currentTime);
             
             const volume = volumeSlider.value / 100 * 0.3;
             gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
