@@ -1016,14 +1016,16 @@
         let isPlaying = false;
         let currentNoiseType = null;
         
-        // =================== RTA (MIC) / ANALYSER ===================
+// =================== RTA (MIC) / ANALYSER (ИСПРАВЛЕННЫЙ) ===================
         let rtaStream = null;
         let rtaSourceNode = null;
         let rtaAnalyser = null;
         let rtaAnimId = null;
         let rtaChart = null;
-        let rtaScaleType = 'logarithmic'; // 'logarithmic' или 'linear'
-        let rtaZoomState = null; // Состояние зума: { min, max } или null
+        let rtaScaleType = 'logarithmic'; 
+        
+        // Состояние зума теперь хранит пределы для обеих осей
+        let rtaZoomState = null; // { x: {min, max}, y: {min, max} }
         let isRtaDrawing = false;
 
         const rtaStartBtn = document.getElementById('rtaStartMic');
@@ -1034,43 +1036,48 @@
         const rtaSmoothSel  = document.getElementById('rtaSmoothingOct');
         const pinkNoiseCorrection = document.getElementById('pinkNoiseCorrection');
         const rtaCanvas = document.getElementById('rtaChart');
-
-        // Синхронизация FFT размеров
         const noiseFftSizeSel = document.getElementById('noiseFftSize');
 
         function ensureRtaChart() {
             if (!rtaCanvas || rtaChart) return;
 
             const ctx = rtaCanvas.getContext('2d');
+            
+            // Настройка градиента для линии графика
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(0, 242, 254, 1)');
+            gradient.addColorStop(1, 'rgba(236, 72, 153, 1)');
+
             rtaChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: [],
                     datasets: [{
-                        label: 'RTA (dB)',
-                        data: [],
-                        borderColor: 'rgba(0, 242, 254, 1)',
+                        label: 'RTA',
+                        data: [], // Данные будут в формате {x: 100, y: -20}
+                        borderColor: '#00F2FE',
                         borderWidth: 2,
-                        pointRadius: 0,
-                        tension: 0.2,
+                        pointRadius: 0, // Убираем точки для производительности
+                        tension: 0.1,   // Небольшое сглаживание линий
                         fill: false
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: false,
+                    animation: false, // Отключаем анимацию для RTA (real-time)
+                    parsing: false,   // Отключаем парсинг для ускорения
+                    normalized: true, // Данные уже нормализованы
                     plugins: { 
                         legend: { display: false },
                         tooltip: {
                             enabled: true,
-                            mode: 'index',
                             intersect: false,
+                            mode: 'nearest',
+                            axis: 'x',
                             callbacks: {
                                 label: function(context) {
-                                    const freq = context.label;
-                                    const value = context.parsed.y;
-                                    return `${freq} Гц: ${value.toFixed(1)} dB`;
+                                    const point = context.raw;
+                                    return `${Math.round(point.x)} Гц: ${point.y.toFixed(1)} dB`;
                                 }
                             }
                         }
@@ -1078,129 +1085,151 @@
                     scales: {
                         x: { 
                             type: rtaScaleType,
+                            min: 20,
+                            max: 24000,
                             ticks: { 
-                                color: '#EAEAEA', 
-                                maxTicksLimit: 10,
+                                color: '#EAEAEA',
+                                autoSkip: true,
+                                maxTicksLimit: 20,
                                 callback: function(value) {
-                                    if (rtaScaleType === 'logarithmic') {
-                                        if (value >= 1000) return (value/1000).toFixed(1) + 'k';
-                                    }
-                                    return value;
+                                    if (value < 1000) return value;
+                                    return (value/1000).toFixed(1) + 'k';
                                 }
                             }, 
                             grid: { color: 'rgba(255,255,255,0.06)' },
-                            title: { display: true, text: 'Частота (Гц)', color: '#EAEAEA' },
-                            min: 20,
-                            max: 24000
+                            title: { display: true, text: 'Частота (Гц)', color: '#EAEAEA' }
                         },
                         y: { 
+                            min: -120, 
+                            max: 0,
                             ticks: { color: '#EAEAEA' }, 
                             grid: { color: 'rgba(255,255,255,0.06)' }, 
-                            suggestedMin: -120, 
-                            suggestedMax: 0,
                             title: { display: true, text: 'Уровень (dB)', color: '#EAEAEA' }
                         }
                     },
                     interaction: {
-                        intersect: false,
-                        mode: 'index'
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
                     }
                 }
             });
 
-            // Добавляем обработчики для выделения области зума мышью
+            // === ЛОГИКА ЗУМА (ИСПРАВЛЕНА) ===
             let isDragging = false;
-            let dragStartX = 0;
-            let dragStartFreq = 0;
+            let dragStart = { x: 0, y: 0 }; // Координаты в пикселях
             let dragRect = null;
 
-            rtaCanvas.addEventListener('mousedown', (e) => {
+            // Хелпер для получения координат внутри канваса
+            const getCanvasRelativeCoords = (e) => {
                 const rect = rtaCanvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                // Проверяем, что клик внутри области графика
-                if (x < rtaChart.chartArea.left || x > rtaChart.chartArea.right || 
-                    y < rtaChart.chartArea.top || y > rtaChart.chartArea.bottom) {
-                    return;
-                }
-                
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            };
+
+            rtaCanvas.addEventListener('mousedown', (e) => {
+                const coords = getCanvasRelativeCoords(e);
+                const chartArea = rtaChart.chartArea;
+
+                // Проверка клика внутри области графика
+                if (coords.x < chartArea.left || coords.x > chartArea.right || 
+                    coords.y < chartArea.top || coords.y > chartArea.bottom) return;
+
                 isDragging = true;
-                dragStartX = x;
-                dragStartFreq = rtaChart.scales.x.getValueForPixel(x);
-                
-                // Создаем элемент для отображения выделения
-                dragRect = document.createElement('div');
-                dragRect.style.position = 'absolute';
-                dragRect.style.border = '2px dashed rgba(0, 242, 254, 0.8)';
-                dragRect.style.backgroundColor = 'rgba(0, 242, 254, 0.1)';
-                dragRect.style.pointerEvents = 'none';
-                dragRect.style.display = 'none';
-                rtaCanvas.parentElement.appendChild(dragRect);
+                dragStart = coords;
+
+                // Создаем визуальный прямоугольник
+                if (!dragRect) {
+                    dragRect = document.createElement('div');
+                    dragRect.style.position = 'absolute';
+                    dragRect.style.border = '1px solid var(--accent-cyan)';
+                    dragRect.style.backgroundColor = 'rgba(0, 242, 254, 0.2)';
+                    dragRect.style.pointerEvents = 'none';
+                    // Важно: добавляем к родителю канваса, у которого position: relative
+                    rtaCanvas.parentElement.appendChild(dragRect);
+                }
+                dragRect.style.display = 'block';
+                // Начальная позиция (нулевой размер)
+                updateDragRect(coords.x, coords.y, 0, 0);
             });
 
             rtaCanvas.addEventListener('mousemove', (e) => {
-                if (!isDragging) return;
+                if (!isDragging || !dragRect) return;
                 
-                const rect = rtaCanvas.getBoundingClientRect();
-                const currentX = e.clientX - rect.left;
+                const coords = getCanvasRelativeCoords(e);
                 
-                if (currentX < rtaChart.chartArea.left) return;
-                if (currentX > rtaChart.chartArea.right) return;
+                // Ограничиваем координаты областью графика
+                const chartArea = rtaChart.chartArea;
+                const currentX = Math.max(chartArea.left, Math.min(coords.x, chartArea.right));
+                const currentY = Math.max(chartArea.top, Math.min(coords.y, chartArea.bottom));
+
+                const width = currentX - dragStart.x;
+                const height = currentY - dragStart.y;
+
+                // Обновляем визуализацию
+                // Math.min/abs используются, чтобы рисовать в любую сторону от точки старта
+                const left = width > 0 ? dragStart.x : currentX;
+                const top = height > 0 ? dragStart.y : currentY;
                 
-                const startX = Math.min(dragStartX, currentX);
-                const width = Math.abs(currentX - dragStartX);
-                
-                dragRect.style.left = (rect.left + startX) + 'px';
-                dragRect.style.top = (rect.top + rtaChart.chartArea.top) + 'px';
-                dragRect.style.width = width + 'px';
-                dragRect.style.height = (rtaChart.chartArea.bottom - rtaChart.chartArea.top) + 'px';
-                dragRect.style.display = 'block';
+                updateDragRect(left, top, Math.abs(width), Math.abs(height));
             });
+
+            const updateDragRect = (left, top, width, height) => {
+                dragRect.style.left = left + 'px';
+                dragRect.style.top = top + 'px';
+                dragRect.style.width = width + 'px';
+                dragRect.style.height = height + 'px';
+            };
 
             rtaCanvas.addEventListener('mouseup', (e) => {
                 if (!isDragging) return;
                 isDragging = false;
+                if (dragRect) dragRect.style.display = 'none';
+
+                const coords = getCanvasRelativeCoords(e);
+                const chartArea = rtaChart.chartArea;
+
+                // Ограничение координат
+                const endX = Math.max(chartArea.left, Math.min(coords.x, chartArea.right));
+                const endY = Math.max(chartArea.top, Math.min(coords.y, chartArea.bottom));
+
+                // Минимальный порог драга (защита от случайных кликов)
+                if (Math.abs(endX - dragStart.x) < 10 && Math.abs(endY - dragStart.y) < 10) return;
+
+                // 1. Получаем значения по осям из пикселей
+                const scaleX = rtaChart.scales.x;
+                const scaleY = rtaChart.scales.y;
+
+                const startValX = scaleX.getValueForPixel(dragStart.x);
+                const endValX = scaleX.getValueForPixel(endX);
                 
-                const rect = rtaCanvas.getBoundingClientRect();
-                const currentX = e.clientX - rect.left;
-                
-                // Удаляем элемент выделения
-                if (dragRect && dragRect.parentElement) {
-                    dragRect.parentElement.removeChild(dragRect);
-                }
-                dragRect = null;
-                
-                // Проверяем минимальный размер выделения
-                if (Math.abs(currentX - dragStartX) < 10) return;
-                
-                const startFreq = dragStartFreq;
-                const endFreq = rtaChart.scales.x.getValueForPixel(currentX);
-                
-                if (startFreq && endFreq) {
-                    const minFreq = Math.min(startFreq, endFreq);
-                    const maxFreq = Math.max(startFreq, endFreq);
-                    
-                    // Устанавливаем зум
-                    rtaZoomState = { min: minFreq, max: maxFreq };
-                    updateRtaChartScale();
-                }
-                
-                dragStartX = 0;
-                dragStartFreq = 0;
+                const startValY = scaleY.getValueForPixel(dragStart.y);
+                const endValY = scaleY.getValueForPixel(endY);
+
+                // 2. Определяем min и max (так как можно тянуть в любую сторону)
+                const xMin = Math.min(startValX, endValX);
+                const xMax = Math.max(startValX, endValX);
+                const yMin = Math.min(startValY, endValY);
+                const yMax = Math.max(startValY, endValY);
+
+                // 3. Сохраняем состояние
+                rtaZoomState = {
+                    x: { min: xMin, max: xMax },
+                    y: { min: yMin, max: yMax }
+                };
+
+                updateRtaChartScale();
             });
 
             rtaCanvas.addEventListener('mouseleave', () => {
                 if (isDragging) {
                     isDragging = false;
-                    if (dragRect && dragRect.parentElement) {
-                        dragRect.parentElement.removeChild(dragRect);
-                    }
-                    dragRect = null;
+                    if (dragRect) dragRect.style.display = 'none';
                 }
             });
 
-            // Двойной клик для сброса зума
             rtaCanvas.addEventListener('dblclick', (e) => {
                 e.preventDefault();
                 resetRtaZoom();
@@ -1210,14 +1239,23 @@
         function updateRtaChartScale() {
             if (!rtaChart) return;
             
+            // Обновляем тип шкалы
             rtaChart.options.scales.x.type = rtaScaleType;
             
             if (rtaZoomState) {
-                rtaChart.options.scales.x.min = rtaZoomState.min;
-                rtaChart.options.scales.x.max = rtaZoomState.max;
+                // Применяем зум
+                rtaChart.options.scales.x.min = rtaZoomState.x.min;
+                rtaChart.options.scales.x.max = rtaZoomState.x.max;
+                
+                rtaChart.options.scales.y.min = rtaZoomState.y.min;
+                rtaChart.options.scales.y.max = rtaZoomState.y.max;
             } else {
+                // Сброс к дефолту
                 rtaChart.options.scales.x.min = 20;
                 rtaChart.options.scales.x.max = 24000;
+                
+                rtaChart.options.scales.y.min = -120;
+                rtaChart.options.scales.y.max = 0;
             }
             
             rtaChart.update('none');
@@ -1262,8 +1300,6 @@
                 noiseFftSizeSel.value = rtaFftSizeSel.value;
                 setRtaFftSize(rtaFftSizeSel.value);
             });
-        } else if (rtaFftSizeSel) {
-            rtaFftSizeSel.addEventListener('change', () => setRtaFftSize(rtaFftSizeSel.value));
         }
 
         function hzFromBin(binIndex, fftSize, sampleRate) {
@@ -1273,52 +1309,49 @@
         // Коррекция для розового шума (+3 дБ/октава)
         function applyPinkNoiseCorrection(freq, magnitudeDb) {
             if (!pinkNoiseCorrection || !pinkNoiseCorrection.checked) return magnitudeDb;
-            
             if (freq <= 0) return magnitudeDb;
-            
-            // Розовый шум имеет спад 3 дБ/октава
-            // Чтобы сделать его плоским, добавляем +3 дБ/октава
-            const referenceFreq = 1000; // Опорная частота 1000 Гц
-            const correction = 3 * Math.log2(freq / referenceFreq);
-            
+            // Розовый шум: спад 3 дБ/окт. Компенсация: +3 дБ/окт. Ref: 1kHz.
+            const correction = 3 * Math.log2(freq / 1000);
             return magnitudeDb + correction;
         }
 
         // Сглаживание спектра
         function smooth1nOct(freqs, magsDb, n) {
-            if (!n || n <= 0 || freqs.length === 0) return { freqs, magsDb };
+            if (!n || n <= 0 || freqs.length === 0) {
+                // Возвращаем объекты {x, y}
+                return freqs.map((f, i) => ({ x: f, y: magsDb[i] }));
+            }
 
-            const outF = [];
-            const outM = [];
-
+            const points = [];
             for (let i = 0; i < freqs.length; i++) {
                 const f = freqs[i];
-                if (f <= 0) continue;
+                if (f <= 20) continue; // Пропускаем инфразвук
 
+                const bandwidth = f / n; // Примерная полоса
                 const f1 = f / Math.pow(2, 1 / (2 * n));
                 const f2 = f * Math.pow(2, 1 / (2 * n));
 
                 let sum = 0;
                 let cnt = 0;
-                for (let k = 0; k < freqs.length; k++) {
+                // Упрощенное окно сглаживания (можно оптимизировать через sliding window)
+                for (let k = Math.max(0, i - 100); k < Math.min(freqs.length, i + 100); k++) {
                     const fk = freqs[k];
                     if (fk >= f1 && fk <= f2) {
                         const lin = Math.pow(10, magsDb[k] / 20);
-                        sum += lin * lin; // Суммируем энергию
+                        sum += lin * lin;
                         cnt++;
                     }
                 }
-                const avgEnergy = cnt ? (sum / cnt) : 0;
-                const avgDb = avgEnergy > 0 ? (10 * Math.log10(avgEnergy)) : -120;
-
-                outF.push(f);
-                outM.push(avgDb);
+                
+                // Если окно слишком узкое (на НЧ), берем сырое значение
+                const val = cnt ? (10 * Math.log10(sum / cnt)) : magsDb[i];
+                points.push({ x: f, y: val });
             }
-            return { freqs: outF, magsDb: outM };
+            return points;
         }
 
         async function startRtaMic() {
-            initAudio();
+            initAudio(); // Инициализация AudioContext если еще не создан
             ensureRtaChart();
 
             if (!navigator.mediaDevices?.getUserMedia) {
@@ -1326,7 +1359,6 @@
                 return;
             }
 
-            // Останавливаем предыдущий анализ
             stopRtaMic();
 
             try {
@@ -1334,14 +1366,14 @@
                     audio: {
                         echoCancellation: false,
                         noiseSuppression: false,
-                        autoGainControl: false,
-                        channelCount: 1
+                        autoGainControl: false
                     }
                 });
 
                 rtaSourceNode = audioContext.createMediaStreamSource(rtaStream);
                 rtaAnalyser = audioContext.createAnalyser();
-                rtaAnalyser.smoothingTimeConstant = 0.8;
+                // Настройки анализатора для более плавного графика
+                rtaAnalyser.smoothingTimeConstant = 0.85; 
                 rtaAnalyser.minDecibels = -120;
                 rtaAnalyser.maxDecibels = 0;
 
@@ -1363,17 +1395,16 @@
                     const sampleRate = audioContext.sampleRate;
                     const fftSize = rtaAnalyser.fftSize;
                     
-                    // Собираем данные частоты и амплитуды
                     const freqs = [];
                     const mags = [];
 
+                    // Собираем сырые данные
                     for (let i = 0; i < bufferLength; i++) {
                         const freq = hzFromBin(i, fftSize, sampleRate);
-                        if (freq < 20 || freq > 24000) continue;
+                        if (freq < 20) continue; // Отсекаем < 20 Гц
+                        if (freq > 24000) break; // Отсекаем > 24 кГц
                         
                         let magnitude = dataArray[i];
-                        
-                        // Применяем коррекцию для розового шума если нужно
                         if (currentNoiseType === 'pink' || pinkNoiseCorrection.checked) {
                             magnitude = applyPinkNoiseCorrection(freq, magnitude);
                         }
@@ -1382,68 +1413,56 @@
                         mags.push(magnitude);
                     }
 
-                    // Применяем сглаживание если нужно
+                    // Применяем сглаживание и получаем массив объектов {x, y}
                     const n = Number(rtaSmoothSel?.value || 0);
-                    const smoothed = smooth1nOct(freqs, mags, n);
+                    let points = smooth1nOct(freqs, mags, n);
 
-                    // Прореживаем данные для отображения (чтобы не тормозило)
-                    const step = Math.max(1, Math.floor(smoothed.freqs.length / 500));
-                    const displayFreqs = [];
-                    const displayMags = [];
-                    const displayLabels = [];
-
-                    for (let i = 0; i < smoothed.freqs.length; i += step) {
-                        const freq = smoothed.freqs[i];
-                        displayFreqs.push(freq);
-                        displayMags.push(smoothed.magsDb[i]);
-                        
-                        // Форматируем метки для оси X
-                        if (rtaScaleType === 'logarithmic') {
-                            if (freq < 1000) {
-                                displayLabels.push(Math.round(freq).toString());
-                            } else {
-                                displayLabels.push((freq/1000).toFixed(1) + 'k');
-                            }
-                        } else {
-                            displayLabels.push(Math.round(freq).toString());
+                    // Оптимизация отрисовки: прореживание точек для Log шкалы
+                    // Чтобы не рисовать тысячи точек, которые сливаются
+                    if (points.length > 1000) {
+                        const optimized = [];
+                        // На высоких частотах шаг больше
+                        const step = Math.ceil(points.length / 800); 
+                        for(let i=0; i<points.length; i+=step) {
+                            optimized.push(points[i]);
                         }
+                        // Всегда добавляем последнюю точку
+                        optimized.push(points[points.length-1]);
+                        points = optimized;
                     }
 
-                    // Обновляем график
-                    rtaChart.data.labels = displayLabels;
-                    rtaChart.data.datasets[0].data = displayMags;
-                    rtaChart.update('none');
+                    // Обновляем данные графика
+                    // ВАЖНО: При использовании {x,y} не используем labels!
+                    rtaChart.data.labels = []; 
+                    rtaChart.data.datasets[0].data = points;
+                    rtaChart.update('none'); // Mode 'none' для производительности
 
                     if (isRtaDrawing) {
-                        requestAnimationFrame(drawRta);
+                        rtaAnimId = requestAnimationFrame(drawRta);
                     }
                 }
 
                 drawRta();
+                rtaStartBtn.classList.add('active');
             } catch (err) {
-                console.error('Ошибка при получении доступа к микрофону:', err);
-                alert('Не удалось получить доступ к микрофону. Пожалуйста, проверьте разрешения.');
+                console.error('Mic Error:', err);
+                alert('Ошибка доступа к микрофону. Проверьте настройки HTTPS и права доступа.');
             }
         }
 
         function stopRtaMic() {
             isRtaDrawing = false;
-            
-            if (rtaAnimId) {
-                cancelAnimationFrame(rtaAnimId);
-                rtaAnimId = null;
-            }
+            if (rtaAnimId) cancelAnimationFrame(rtaAnimId);
             
             if (rtaSourceNode) {
-                try { rtaSourceNode.disconnect(); } catch {}
+                try { rtaSourceNode.disconnect(); } catch(e){}
                 rtaSourceNode = null;
             }
-            rtaAnalyser = null;
-
             if (rtaStream) {
                 rtaStream.getTracks().forEach(t => t.stop());
                 rtaStream = null;
             }
+            if(rtaStartBtn) rtaStartBtn.classList.remove('active');
         }
 
         if (rtaStartBtn) rtaStartBtn.addEventListener('click', startRtaMic);
