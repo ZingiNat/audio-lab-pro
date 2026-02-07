@@ -424,102 +424,88 @@
             border-left: 3px solid var(--accent-cyan);
         }
 
-        /* Стили для калькулятора SPL */
-        .calculator-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-        }
+/* ОБНОВЛЕННЫЕ СТИЛИ SPL КАЛЬКУЛЯТОРА */
+.spl-container {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 2rem;
+    align-items: start;
+}
 
-        .input-group {
-            margin-bottom: 1.5rem;
-        }
+/* Визуализация */
+.spl-visualizer {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 12px;
+    height: 300px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(0, 242, 254, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
-        .input-group label {
-            display: block;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-            color: var(--accent-lime);
-        }
+.speaker-icon {
+    position: absolute;
+    left: 20px;
+    font-size: 3rem;
+    z-index: 2;
+    filter: drop-shadow(0 0 10px var(--accent-cyan));
+}
 
-        input[type="number"] {
-            width: 100%;
-            padding: 0.8rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(0, 242, 254, 0.3);
-            border-radius: 6px;
-            color: var(--text-white);
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 1rem;
-        }
+.listener-icon {
+    position: absolute;
+    font-size: 2.5rem;
+    z-index: 2;
+    transition: left 0.3s ease;
+    filter: drop-shadow(0 0 5px white);
+}
 
-        input[type="number"]:focus {
-            outline: none;
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
-        }
+/* Волны звука */
+.sound-wave {
+    position: absolute;
+    left: 50px;
+    border: 2px solid var(--accent-cyan);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+}
 
-                .select-control {
-            width: 100%;
-            padding: 0.8rem;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(0, 242, 254, 0.3);
-            border-radius: 6px;
-            color: var(--text-white);
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 1rem;
-        }
-        .select-control:focus {
-            outline: none;
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
-        }
+@keyframes wave-pulse {
+    0% { transform: scale(0.1); opacity: 0.8; }
+    100% { transform: scale(3); opacity: 0; }
+}
 
+.wave-active {
+    animation: wave-pulse 2s infinite;
+}
 
-        .btn-calculate {
-            background: linear-gradient(90deg, var(--accent-fuchsia), var(--accent-cyan));
-            color: white;
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 6px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 600;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 1rem;
-            width: 100%;
-        }
+/* Шкала опасности */
+.danger-meter {
+    width: 100%;
+    height: 10px;
+    background: #333;
+    border-radius: 5px;
+    margin-top: 1rem;
+    overflow: hidden;
+    display: flex;
+}
 
-        .btn-calculate:hover {
-            box-shadow: 0 0 20px rgba(236, 72, 153, 0.4);
-            transform: translateY(-2px);
-        }
+.danger-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s, background 0.3s;
+    background: linear-gradient(90deg, #bef264, #fbbf24, #ef4444);
+}
 
-        .result-box {
-            background: linear-gradient(135deg, rgba(0, 242, 254, 0.1), rgba(236, 72, 153, 0.1));
-            border-radius: 10px;
-            padding: 1.5rem;
-            margin-top: 1.5rem;
-            border: 1px solid rgba(0, 242, 254, 0.3);
-            text-align: center;
-        }
-
-        .result-box h4 {
-            font-family: 'Teko', sans-serif;
-            font-size: 1.8rem;
-            color: var(--accent-cyan);
-            margin-bottom: 0.8rem;
-        }
-
-        .result-value {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 2rem;
-            color: var(--accent-lime);
-            font-weight: 600;
-        }
+@media (max-width: 900px) {
+    .spl-container {
+        grid-template-columns: 1fr;
+    }
+    .spl-visualizer {
+        order: -1; /* Визуализация сверху на мобильных */
+    }
+}
 
         /* Адаптивность */
         @media (max-width: 1100px) {
@@ -1002,48 +988,49 @@
         <section id="calculator" class="tab-section">
             <div class="section">
                 <h2>КАЛЬКУЛЯТОР ЗВУКОВОГО ДАВЛЕНИЯ (SPL)</h2>
-                <p>Расчет уровня звукового давления на заданном расстоянии от акустической системы.</p>
+                <p>Интерактивный расчет уровня звукового давления в зависимости от мощности и расстояния.</p>
                 
-                <div class="calculator-grid">
-                    <div>
-                        <div class="input-group">
-                            <label for="power">Мощность акустической системы (Вт):</label>
-                            <input type="number" id="power" step="any" min="0" placeholder="Например: 100" value="100">
+                <div class="spl-container">
+                    <!-- Левая колонка: Управление -->
+                    <div class="spl-controls">
+                        <div class="control-group">
+                            <label>Мощность системы: <span id="val-power" class="value-display">100 Вт</span></label>
+                            <input type="range" id="spl-power" min="1" max="2000" value="100" oninput="updateSPL()">
                         </div>
-                        
-                        <div class="input-group">
-                            <label for="sensitivity">Чувствительность (дБ/Вт/м):</label>
-                            <input type="number" id="sensitivity" step="any" min="0" placeholder="Например: 90" value="90">
+            
+                        <div class="control-group">
+                            <label>Чувствительность (дБ/Вт/м): <span id="val-sens" class="value-display">90 дБ</span></label>
+                            <input type="range" id="spl-sens" min="70" max="110" value="90" oninput="updateSPL()">
                         </div>
-                        
-                        <div class="input-group">
-                            <label for="distance">Расстояние до слушателя (м):</label>
-                            <input type="number" id="distance" step="any" min="0.1" placeholder="Например: 5" value="5">
+            
+                        <div class="control-group">
+                            <label>Расстояние до слушателя: <span id="val-dist" class="value-display">5 м</span></label>
+                            <input type="range" id="spl-dist" min="0.5" max="50" step="0.5" value="5" oninput="updateSPL()">
                         </div>
-                        
-                        <button class="btn-calculate" onclick="calculateSPL()">РАССЧИТАТЬ SPL</button>
-                    </div>
-                    
-                    <div>
+            
                         <div class="result-box">
-                            <h4>РЕЗУЛЬТАТ</h4>
-                            <div id="splResult">
-                                <p>Введите параметры и нажмите "Рассчитать SPL"</p>
+                            <h4>ИТОГОВЫЙ SPL</h4>
+                            <div id="spl-total-val" class="result-value">-- дБ</div>
+                            <p id="spl-description">Загрузка...</p>
+                            <div class="danger-meter">
+                                <div id="spl-danger-fill" class="danger-fill"></div>
                             </div>
                         </div>
-                        
-                        <div class="info-box" style="margin-top: 1.5rem;">
-                            <strong>Формула расчета:</strong><br>
-                            SPL = Чувствительность + 10×log₁₀(Мощность) - 20×log₁₀(Расстояние)
+                    </div>
+            
+                    <!-- Правая колонка: Визуализация -->
+                    <div class="spl-visual-container">
+                        <div class="spl-visualizer" id="spl-viz">
+                            <div class="speaker-icon">🔊</div>
+                            <div class="listener-icon" id="listener">👤</div>
+                            <!-- Волны генерируются через JS -->
+                            <div class="sound-wave wave-active" style="width: 100px; height: 100px; animation-delay: 0s;"></div>
+                            <div class="sound-wave wave-active" style="width: 100px; height: 100px; animation-delay: 0.6s;"></div>
+                            <div class="sound-wave wave-active" style="width: 100px; height: 100px; animation-delay: 1.2s;"></div>
                         </div>
                         
                         <div class="info-box" style="margin-top: 1rem;">
-                            <strong>Справочная информация:</strong><br>
-                            • Шепот: ~30 дБ<br>
-                            • Обычный разговор: ~60 дБ<br>
-                            • Уличный шум: ~80 дБ<br>
-                            • Концерт: 100-120 дБ<br>
-                            • Болевой порог: ~130 дБ
+                            <strong>💡 Как это работает:</strong> При удвоении мощности SPL растет на 3 дБ. При удвоении расстояния SPL падает на 6 дБ.
                         </div>
                     </div>
                 </div>
@@ -2290,52 +2277,74 @@ window.addEventListener('orientationchange', () => {
             setTimeout(updateCrossoverCalc, 500);
         }
         
-        // =================== КАЛЬКУЛЯТОР SPL ===================
-        
-        function calculateSPL() {
-            const power = parseFloat(document.getElementById('power').value);
-            const sensitivity = parseFloat(document.getElementById('sensitivity').value);
-            const distance = parseFloat(document.getElementById('distance').value);
-            const resultDiv = document.getElementById('splResult');
-        
-            if (isNaN(power) || isNaN(sensitivity) || isNaN(distance) || distance <= 0) {
-                resultDiv.innerHTML = '<p style="color: #ef4444;">Пожалуйста, введите корректные значения.</p>';
-                return;
-            }
-        
-            // Звуковое давление (SPL) = Чувствительность + 10 * log10(Мощность) - 20 * log10(Расстояние)
-            const spl = sensitivity + 10 * Math.log10(power) - 20 * Math.log10(distance);
-            
-            // Определяем уровень громкости
-            let volumeLevel = "";
-            if (spl < 40) volumeLevel = "Очень тихо (шепот)";
-            else if (spl < 60) volumeLevel = "Тихий разговор";
-            else if (spl < 80) volumeLevel = "Обычный разговор";
-            else if (spl < 100) volumeLevel = "Громко (уличный шум)";
-            else if (spl < 120) volumeLevel = "Очень громко (концерт)";
-            else volumeLevel = "Экстремально громко (болевой порог)";
-        
-            resultDiv.innerHTML = `
-                <div class="result-value">${spl.toFixed(2)} дБ</div>
-                <p>на расстоянии ${distance} м</p>
-                <p style="margin-top: 1rem; color: #bef264;"><strong>Уровень громкости:</strong> ${volumeLevel}</p>
-                <p style="margin-top: 0.5rem; font-size: 0.9rem;">
-                    При мощности: ${power} Вт<br>
-                    Чувствительность: ${sensitivity} дБ/Вт/м
-                </p>
-            `;
-        }
-        
-        // Инициализация калькулятора при загрузке
-        if (document.getElementById('power')) {
-            // Устанавливаем начальные значения
-            document.getElementById('power').value = 100;
-            document.getElementById('sensitivity').value = 90;
-            document.getElementById('distance').value = 5;
-            
-            // Выполняем первоначальный расчет
-            setTimeout(calculateSPL, 500);
-        }
+// =================== ОБНОВЛЕННЫЙ КАЛЬКУЛЯТОР SPL ===================
+
+function updateSPL() {
+    // Получаем значения из ползунков
+    const P = parseFloat(document.getElementById('spl-power').value);
+    const S = parseFloat(document.getElementById('spl-sens').value);
+    const D = parseFloat(document.getElementById('spl-dist').value);
+
+    // Обновляем текстовые значения
+    document.getElementById('val-power').textContent = P + " Вт";
+    document.getElementById('val-sens').textContent = S + " дБ";
+    document.getElementById('val-dist').textContent = D + " м";
+
+    // Формула: SPL = Sens + 10*log10(Power) - 20*log10(Distance)
+    const spl = S + (10 * Math.log10(P)) - (20 * Math.log10(D));
+    const finalSpl = Math.max(0, spl).toFixed(1);
+
+    // Вывод результата
+    const resDisplay = document.getElementById('spl-total-val');
+    resDisplay.textContent = finalSpl + " дБ";
+
+    // Описание и цвет
+    let desc = "";
+    let color = "#bef264"; // Зеленый
+    let dangerPercent = (finalSpl / 140) * 100;
+
+    if (finalSpl < 60) desc = "Тихая обстановка (офис/дом)";
+    else if (finalSpl < 85) desc = "Безопасный уровень (шум дороги)";
+    else if (finalSpl < 100) {
+        desc = "Громко: длительное воздействие опасно!";
+        color = "#fbbf24"; // Желтый
+    } else if (finalSpl < 120) {
+        desc = "Очень громко: риск повреждения слуха!";
+        color = "#f97316"; // Оранжевый
+    } else {
+        desc = "БОЛЕВОЙ ПОРОГ: Травма органов слуха!";
+        color = "#ef4444"; // Красный
+    }
+
+    const descElem = document.getElementById('spl-description');
+    descElem.textContent = desc;
+    descElem.style.color = color;
+    resDisplay.style.color = color;
+    
+    // Обновляем шкалу опасности
+    document.getElementById('spl-danger-fill').style.width = Math.min(100, dangerPercent) + "%";
+
+    // --- ВИЗУАЛИЗАЦИЯ ---
+    // Двигаем человечка (D от 0.5 до 50м отображаем на шкале 15% - 85%)
+    const listener = document.getElementById('listener');
+    const visualPos = 15 + (Math.log10(D) / Math.log10(50)) * 70;
+    listener.style.left = visualPos + "%";
+
+    // Меняем цвет волн в зависимости от громкости
+    const waves = document.querySelectorAll('.sound-wave');
+    waves.forEach(w => {
+        w.style.borderColor = color;
+        // Скорость анимации волн зависит от мощности
+        w.style.animationDuration = (2.5 - (P/1000)) + "s";
+    });
+}
+
+// Инициализация при загрузке
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('spl-power')) {
+        updateSPL();
+    }
+});
         
         // =================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===================
         
