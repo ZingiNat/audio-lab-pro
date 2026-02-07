@@ -1580,7 +1580,7 @@
             volumeSlider.addEventListener('input', (e) => {
                 const volume = e.target.value;
                 volumeDisplay.textContent = `${volume}%`;
-                const gainValue = volume / 100 * 0.3; // Ограничиваем максимальную громкость
+                const gainValue = volume / 100; // Ограничиваем максимальную громкость
                 
                 if (gainNode) {
                     gainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);
@@ -1603,7 +1603,7 @@
             oscillator.type = 'sine';
             oscillator.frequency.setValueAtTime(sliderToFreq(frequencySlider.value), audioContext.currentTime);
             
-            const volume = volumeSlider.value / 100 * 0.3;
+            const volume = volumeSlider.value / 100;
             gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
             
             oscillator.connect(gainNode);
@@ -1705,7 +1705,7 @@
             noiseSource.buffer = noiseBuffer;
             noiseSource.loop = true;
             
-            const volume = volumeSlider.value / 100 * 0.3;
+            const volume = volumeSlider.value / 100;
             noiseGainNode.gain.setValueAtTime(volume, audioContext.currentTime);
             
             noiseSource.connect(noiseGainNode);
