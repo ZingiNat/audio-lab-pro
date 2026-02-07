@@ -855,13 +855,13 @@
                         <div class="buttons-container" style="margin-bottom: 1rem;">
                             <button class="btn btn-tone" id="rtaStartMic">Старт микрофон</button>
                             <button class="btn btn-stop" id="rtaStopMic">Стоп микрофон</button>
-                            <button class="btn btn-tone" id="rtaScaleToggle">Переключить: Линейная / Логарифмическая</button>
+                            <button class="btn btn-tone" id="rtaScaleToggle">Линейная / Логарифмическая</button>
                             <button class="btn btn-tone" id="rtaResetZoom">Сбросить зум</button>
                         </div>
 
-                        <div class="chart-container" style="width: 900px; max-width: 100%; height: 400px; margin: 1rem auto; position: relative;">
-                            <canvas id="rtaChart"></canvas>
-                        </div>
+<div class="rta-chart-wrapper">
+    <canvas id="rtaChart"></canvas>
+</div>
 
                         <div class="info-box">
                             <strong>Примечание:</strong> FFT размер синхронизируется с генератором шумов. Используйте мышь для выделения области на графике для увеличения (зум). Кнопка переключения меняет шкалу частот между линейной и логарифмической. Коррекция розового шума применяется автоматически при анализе розового шума.
@@ -1824,6 +1824,32 @@
             stopNoise();
             stopRtaMic();
         });
+
+        // Автоматическая подстройка размера графика при изменении ориентации
+window.addEventListener('resize', () => {
+    if (rtaChart) {
+        rtaChart.resize();
+    }
+});
+
+// Дополнительная функция для "умной" высоты
+function adjustChartHeight() {
+    const wrapper = document.querySelector('.rta-chart-wrapper');
+    if (window.innerHeight < 500 && window.orientation !== 0) {
+        // Если телефон горизонтально
+        wrapper.style.height = '85vh';
+    } else {
+        // Если вертикально
+        wrapper.style.height = window.innerWidth < 768 ? '300px' : '400px';
+    }
+}
+
+window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+        adjustChartHeight();
+        if (rtaChart) rtaChart.resize();
+    }, 200);
+});
         
         // =================== СИМУЛЯТОР КРОССОВЕРА ===================
         
