@@ -683,6 +683,72 @@
             color: var(--accent-lime);
             margin-top: 0.2rem;
         }
+
+        /* Улучшенная мобильная адаптация и стилизация контроля RTA */
+.rta-controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.rta-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.rta-input-wrapper label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--accent-lime);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Стилизация контейнера чекбокса под стиль select */
+.custom-checkbox-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 45px; /* Совпадает с высотой select */
+    padding: 0 0.8rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(0, 242, 254, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.custom-checkbox-box:hover {
+    border-color: var(--accent-cyan);
+}
+
+.custom-checkbox-box input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-cyan);
+}
+
+.custom-checkbox-box span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text-white);
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .generator-controls {
+        grid-template-columns: 1fr !important;
+    }
+    .rta-controls-grid {
+        grid-template-columns: 1fr;
+    }
+    .chart-container {
+        height: 300px !important;
+    }
+}
     </style>
 </head>
 <body>
@@ -750,10 +816,10 @@
                 <div class="generator-controls">
                     <div style="grid-column: 1 / -1;">
                         <h3>📈 RTA (МИКРОФОН)</h3>
-                        <p>Анализ спектра в реальном времени с микрофона (Real‑Time Analyzer).</p>
-
-                        <div style="display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
-                            <div class="control-group" style="flex: 1; min-width: 200px;">
+                        <p>Анализ спектра в реальном времени с микрофона.</p>
+                        
+                        <div class="rta-controls-grid">
+                            <div class="rta-input-wrapper">
                                 <label for="rtaFftSize">FFT размер:</label>
                                 <select id="rtaFftSize" class="select-control">
                                     <option value="1024">1024</option>
@@ -763,23 +829,25 @@
                                     <option value="16384">16384</option>
                                 </select>
                             </div>
-
-                            <div class="control-group" style="flex: 1; min-width: 200px;">
-                                <label for="rtaSmoothingOct">Сглаживание (1/n октавы):</label>
+                        
+                            <div class="rta-input-wrapper">
+                                <label for="rtaSmoothingOct">Сглаживание (1/n окт):</label>
                                 <select id="rtaSmoothingOct" class="select-control">
                                     <option value="0" selected>Выкл</option>
-                                    <option value="1">1</option>
-                                    <option value="2">1/2</option>
-                                    <option value="3">1/3</option>
-                                    <option value="4">1/4</option>
-                                    <option value="6">1/6</option>
-                                    <option value="12">1/12</option>
+                                    <option value="1">1 окт</option>
+                                    <option value="3">1/3 окт</option>
+                                    <option value="6">1/6 окт</option>
+                                    <option value="12">1/12 окт</option>
+                                    <option value="24">1/24 окт</option>
                                 </select>
                             </div>
-                            
-                            <div class="toggle-group" style="flex: 1; min-width: 200px; margin: 0;">
-                                <input type="checkbox" id="pinkNoiseCorrection" checked>
-                                <span><b>Коррекция розового шума</b><br><small>+3 дБ/октава</small></span>
+                        
+                            <div class="rta-input-wrapper">
+                                <label>Дополнительно:</label>
+                                <label class="custom-checkbox-box" for="pinkNoiseCorrection">
+                                    <input type="checkbox" id="pinkNoiseCorrection" checked>
+                                    <span>Коррекция (+3дБ/окт)</span>
+                                </label>
                             </div>
                         </div>
 
