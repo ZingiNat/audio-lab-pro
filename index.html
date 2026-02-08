@@ -2287,72 +2287,194 @@ window.addEventListener('orientationchange', () => {
         
 // =================== ОБНОВЛЕННЫЙ КАЛЬКУЛЯТОР SPL ===================
 
-function updateSPL() {
-    // Получаем значения из ползунков
-    const P = parseFloat(document.getElementById('spl-power').value);
-    const S = parseFloat(document.getElementById('spl-sens').value);
-    const D = parseFloat(document.getElementById('spl-dist').value);
-
-    // Обновляем текстовые значения
-    document.getElementById('val-power').textContent = P + " Вт";
-    document.getElementById('val-sens').textContent = S + " дБ";
-    document.getElementById('val-dist').textContent = D + " м";
-
-    // Формула: SPL = Sens + 10*log10(Power) - 20*log10(Distance)
-    const spl = S + (10 * Math.log10(P)) - (20 * Math.log10(D));
-    const finalSpl = Math.max(0, spl).toFixed(1);
-
-    // Вывод результата
-    const resDisplay = document.getElementById('spl-total-val');
-    resDisplay.textContent = finalSpl + " дБ";
-
-    // Описание и цвет
-    let desc = "";
-    let color = "#bef264"; // Зеленый
-    let dangerPercent = (finalSpl / 140) * 100;
-
-    if (finalSpl < 60) desc = "Тихая обстановка (офис/дом)";
-    else if (finalSpl < 85) desc = "Безопасный уровень (шум дороги)";
-    else if (finalSpl < 100) {
-        desc = "Громко: длительное воздействие опасно!";
-        color = "#fbbf24"; // Желтый
-    } else if (finalSpl < 120) {
-        desc = "Очень громко: риск повреждения слуха!";
-        color = "#f97316"; // Оранжевый
-    } else {
-        desc = "БОЛЕВОЙ ПОРОГ: Травма органов слуха!";
-        color = "#ef4444"; // Красный
-    }
-
-    const descElem = document.getElementById('spl-description');
-    descElem.textContent = desc;
-    descElem.style.color = color;
-    resDisplay.style.color = color;
-    
-    // Обновляем шкалу опасности
-    document.getElementById('spl-danger-fill').style.width = Math.min(100, dangerPercent) + "%";
-
-    // --- ВИЗУАЛИЗАЦИЯ ---
-    // Двигаем человечка (D от 0.5 до 50м отображаем на шкале 15% - 85%)
-    const listener = document.getElementById('listener');
-    const visualPos = 15 + (Math.log10(D) / Math.log10(50)) * 70;
-    listener.style.left = visualPos + "%";
-
-    // Меняем цвет волн в зависимости от громкости
-    const waves = document.querySelectorAll('.sound-wave');
-    waves.forEach(w => {
-        w.style.borderColor = color;
-        // Скорость анимации волн зависит от мощности
-        w.style.animationDuration = (2.5 - (P/1000)) + "s";
-    });
-}
-
-// Инициализация при загрузке
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('spl-power')) {
-        updateSPL();
-    }
-});
+        /**
+         * КОНФИГУРАЦИЯ И КОНСТАНТЫ
+         * Выносим настройки наверх, чтобы их легко было править, не лезая в логику.
+         */
+        const CONFIG = {
+            // Смешанная шкала: Фибоначчи + Стандартные аудио-значения
+            // Это дает "логарифмическое ощущение" но с красивыми круглыми числами.
+            POWER_SCALE: [
+                1, 2, 3, 5, 8, 10, 13, 15, 20, 21, 25, 30, 34, 40, 50, 55, // Низкая громкость
+                60, 75, 80, 89, 100, 110, 120, 125, 144, 150, 175, 200,    // Средняя
+                233, 250, 300, 350, 377, 400, 500, 600, 610, 700, 750,     // Высокая
+                800, 900, 987, 1000, 1200, 1500, 1597, 2000, 2500, 3000    // Hi-End
+            ],
+            COLORS: {
+                SAFE: '#bef264',   // Лайм (до 65 дБ)
+                NORMAL: '#22c55e', // Зеленый (до 85 дБ)
+                WARNING: '#fbbf24',// Желтый (до 100 дБ)
+                DANGER: '#f97316', // Оранжевый (до 120 дБ)
+                CRITICAL: '#ef4444'// Красный (> 120 дБ)
+            }
+        };
+        
+        /**
+         * БИЗНЕС-ЛОГИКА
+         * Чистые функции: принимают цифры, возвращают цифры.
+         */
+        const AudioMath = {
+            /**
+             * Расчет SPL (Sound Pressure Level)
+             * SPL = Sens + 10*log(Power) - 20*log(Distance)
+             */
+            calculateSPL(power, sens, distance) {
+                if (distance <= 0) distance = 0.1; // Защита от деления на ноль/бесконечности
+                const spl = sens + (10 * Math.log10(power)) - (20 * Math.log10(distance));
+                return Math.max(0, spl); // Не может быть меньше 0
+            },
+        
+            /**
+             * Определение статуса опасности
+             */
+            getSafetyState(spl) {
+                if (spl < 65) return { text: "Тихо: Офис / Жилая комната", color: CONFIG.COLORS.SAFE };
+                if (spl < 85) return { text: "Норма: Шум улицы / Громкий разговор", color: CONFIG.COLORS.NORMAL };
+                if (spl < 100) return { text: "Громко: Опасно при долгом прослушивании", color: CONFIG.COLORS.WARNING };
+                if (spl < 120) return { text: "ОПАСНО: Риск повреждения слуха!", color: CONFIG.COLORS.DANGER };
+                return { text: "КРИТИЧНО: Болевой порог! Немедленная травма.", color: CONFIG.COLORS.CRITICAL };
+            },
+        
+            /**
+             * Логарифмическая нормализация для UI (движение ползунков)
+             * Преобразует value (например, дистанцию) в % (0-100) по логарифмической шкале
+             */
+            toLogPercent(value, min, max) {
+                const minLog = Math.log(min);
+                const maxLog = Math.log(max);
+                const valueLog = Math.log(value);
+                return ((valueLog - minLog) / (maxLog - minLog)) * 100;
+            }
+        };
+        
+        /**
+         * УПРАВЛЕНИЕ ИНТЕРФЕЙСОМ
+         * Класс связывает HTML и Логику
+         */
+        class SPLCalculatorUI {
+            constructor() {
+                this.dom = {
+                    inputs: {
+                        power: document.getElementById('spl-power'),
+                        sens: document.getElementById('spl-sens'),
+                        dist: document.getElementById('spl-dist')
+                    },
+                    displays: {
+                        valPower: document.getElementById('val-power'),
+                        valSens: document.getElementById('val-sens'),
+                        valDist: document.getElementById('val-dist'),
+                        total: document.getElementById('spl-total-val'),
+                        desc: document.getElementById('spl-description'),
+                        dangerBar: document.getElementById('spl-danger-fill'),
+                        visualListener: document.getElementById('listener'),
+                        waves: document.querySelectorAll('.sound-wave'),
+                        // Если используете CSS переменные
+                        container: document.querySelector('.spl-calculator-section') || document.body 
+                    }
+                };
+        
+                this.init();
+            }
+        
+            init() {
+                // Настройка слайдера мощности под размер нашего массива
+                const powerSlider = this.dom.inputs.power;
+                powerSlider.min = 0;
+                powerSlider.max = CONFIG.POWER_SCALE.length - 1;
+                powerSlider.step = 1;
+                
+                // Устанавливаем дефолтное значение 100 Вт
+                const defaultIndex = CONFIG.POWER_SCALE.indexOf(100);
+                powerSlider.value = defaultIndex !== -1 ? defaultIndex : 10;
+        
+                // Навешиваем обработчики
+                this.addListeners();
+                
+                // Первичный рендер
+                this.update();
+            }
+        
+            addListeners() {
+                // Используем стрелочную функцию, чтобы сохранить контекст 'this'
+                const handleChange = () => this.update();
+        
+                Object.values(this.dom.inputs).forEach(input => {
+                    input.addEventListener('input', handleChange);
+                });
+            }
+        
+            update() {
+                // 1. Считываем данные
+                const powerIndex = parseInt(this.dom.inputs.power.value, 10);
+                const P = CONFIG.POWER_SCALE[powerIndex]; // Маппинг индекса в реальные Ватты
+                
+                const S = parseFloat(this.dom.inputs.sens.value);
+                const D = parseFloat(this.dom.inputs.dist.value);
+        
+                // 2. Считаем математику (через чистую функцию)
+                const spl = AudioMath.calculateSPL(P, S, D);
+                const state = AudioMath.getSafetyState(spl);
+        
+                // 3. Рендерим UI
+                this.renderText(P, S, D, spl, state);
+                this.renderVisuals(P, D, spl, state);
+            }
+        
+            renderText(P, S, D, spl, state) {
+                // Обновление цифр
+                this.dom.displays.valPower.textContent = `${P} Вт`;
+                this.dom.displays.valSens.textContent = `${S} дБ`;
+                this.dom.displays.valDist.textContent = `${D} м`;
+                this.dom.displays.total.textContent = `${spl.toFixed(1)} дБ`;
+                this.dom.displays.desc.textContent = state.text;
+            }
+        
+            renderVisuals(P, D, spl, state) {
+                const { displays } = this.dom;
+                const color = state.color;
+        
+                // 1. Цветовая индикация (ГЛАВНОЕ ИСПРАВЛЕНИЕ)
+                displays.total.style.color = color;
+                displays.desc.style.color = color;
+                displays.dangerBar.style.backgroundColor = color;
+                
+                // Опционально: Если вы используете мои предыдущие CSS переменные
+                displays.container.style.setProperty('--spl-current-color', color);
+        
+                // 2. Шкала опасности (0-100% ширины)
+                // Максимум берем 140 дБ как потолок
+                const dangerPercent = Math.min(100, (spl / 140) * 100);
+                displays.dangerBar.style.width = `${dangerPercent}%`;
+        
+                // 3. Позиция слушателя (Логарифмическая шкала)
+                // Дистанция от 0.5 до 50м мапится в 15% - 85% ширины блока
+                const logPos = AudioMath.toLogPercent(D, 0.5, 50);
+                // clamp между 5% и 95% чтобы не вылезал
+                const safePos = Math.max(5, Math.min(95, 15 + (logPos * 0.7))); 
+                displays.visualListener.style.left = `${safePos}%`;
+        
+                // 4. Волны (Скорость и Цвет)
+                displays.waves.forEach(w => {
+                    w.style.borderColor = color; // Возвращаем цвет волнам
+                    
+                    // Расчет скорости анимации: чем больше мощность, тем быстрее
+                    // P от 1 до 3000. log(P) от 0 до ~3.5
+                    // duration от 2.5s (медленно) до 0.4s (быстро)
+                    const speedFactor = Math.log10(P) / Math.log10(3000); // 0..1
+                    const duration = 2.5 - (speedFactor * 2.1); 
+                    
+                    w.style.animationDuration = `${duration}s`;
+                });
+            }
+        }
+        
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            // Проверка на наличие элементов, чтобы не ломать другие страницы
+            if (document.getElementById('spl-power')) {
+                new SPLCalculatorUI();
+            }
+        });
         
         // =================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===================
         
