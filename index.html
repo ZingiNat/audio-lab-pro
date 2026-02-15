@@ -12,6 +12,10 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
     <link rel="manifest" href="/favicon/site.webmanifest" />
     
+<!-- Обязательно: Hammer.js для жестов -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<!-- Плагин зума для Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -689,11 +693,138 @@
 .rta-chart-wrapper {
     width: 100%;
     height: 400px; /* Дефолтная высота для десктопа */
-    margin: 1rem 0;
     position: relative;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 10px;
     border: 1px solid rgba(0, 242, 254, 0.2);
+}
+
+/* === НОВЫЕ СТИЛИ ДЛЯ ЗУМА И ПРОКРУТКИ === */
+.rta-chart-layout {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    height: 400px;
+    margin-top: 1rem;
+}
+
+/* Левая панель: Ось Y */
+.axis-panel-y {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 242, 254, 0.2);
+    width: 40px;
+}
+
+/* Центральная область */
+.chart-center-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Нижняя панель: Ось X */
+.axis-panel-x {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 242, 254, 0.2);
+    height: 40px;
+}
+
+/* Кнопки зума */
+.axis-btn {
+    background: rgba(0, 0, 0, 0);
+    border: 1px solid var(--accent-cyan);
+    color: var(--accent-cyan);
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.1rem;
+    line-height: 1;
+    transition: 0.2s;
+    flex-shrink: 0;
+}
+
+.axis-btn:hover {
+    background: var(--accent-cyan);
+    color: var(--bg-dark);
+}
+
+/* Полоса прокрутки (Слайдер) */
+.axis-scrollbar {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Горизонтальный скролл */
+.scrollbar-x {
+    flex: 1;
+    height: 8px;
+    margin: 0 10px;
+}
+
+.scrollbar-x::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.scrollbar-x::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 20px;
+    width: 40px; /* Ширина "бегунка" */
+    margin-top: -6px;
+    background: var(--accent-cyan);
+    border-radius: 4px;
+    cursor: grab;
+}
+
+/* Вертикальный скролл */
+.scrollbar-y {
+    flex: 1;
+    width: 8px;
+    writing-mode: vertical-lr; /* Вертикальная ориентация */
+    direction: rtl;
+    margin: 10px 0;
+}
+
+.scrollbar-y::-webkit-slider-runnable-track {
+    width: 8px;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.scrollbar-y::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px;
+    height: 40px; /* Высота "бегунка" */
+    margin-left: -6px;
+    background: var(--accent-cyan);
+    border-radius: 4px;
+    cursor: grab;
+}
+
+/* Корректировка обертки канваса внутри новой структуры */
+.chart-center-col .rta-chart-wrapper {
+    height: 100%;
+    margin: 0;
+    flex: 1;
 }
 
 /* МОБИЛЬНАЯ АДАПТАЦИЯ (ПОРТРЕТ) */
@@ -706,9 +837,31 @@
         margin-bottom: 1rem;
         border-radius: 0; /* На мобилках лучше без скруглений по краям */
     }
-    .rta-chart-wrapper {
-        height: 300px; /* Чуть ниже на мобилках */
+    
+    .rta-chart-layout {
+        height: 300px;
     }
+    
+    .axis-panel-y {
+        width: 30px;
+    }
+    .axis-panel-x {
+        height: 30px;
+    }
+    .axis-btn {
+        width: 24px;
+        height: 24px;
+        font-size: 0.9rem;
+    }
+    /* Скрываем скроллбары на очень маленьких экранах для экономии места, оставляем кнопки */
+    .axis-scrollbar {
+        display: none; 
+    }
+    .axis-panel-y, .axis-panel-x {
+        justify-content: center;
+        gap: 5px;
+    }
+
     .generator-controls {
         display: flex;
         flex-direction: column;
@@ -730,9 +883,8 @@
     .section h2, .section h3, .section p:not(.chart-info) {
         display: none; /* Скрываем лишние заголовки при анализе */
     }
-    .rta-chart-wrapper {
+    .rta-chart-layout {
         height: 80vh; /* График занимает почти весь экран */
-        margin: 0;
     }
     .rta-controls-grid {
         grid-template-columns: repeat(3, 1fr); /* Контролы в ряд сверху */
@@ -774,7 +926,7 @@
                 <div class="intro-grid">
                     <div class="tool-card">
                         <h4>ГЕНЕРАТОР ЧАСТОТ</h4>
-                        <p>Генерируйте чистые тоны и различные типы шумов (белый, розовый, коричневый). Идеально для тестирования аудиооборудования, калибровки и аудиоэкспериментов.</p>
+                        <p>Генерируйте чистые тона и различные типы шумов (белый, розовый, коричневый). Идеально для тестирования аудиооборудования, калибровки и аудиоэкспериментов.</p>
                     </div>
                     
                     <div class="tool-card">
@@ -853,8 +1005,27 @@
                             <button class="btn btn-tone" id="rtaResetZoom">Сбросить зум</button>
                         </div>
 
-<div class="rta-chart-wrapper">
-    <canvas id="rtaChart"></canvas>
+<!-- НОВАЯ СТРУКТУРА RTA ГРАФИКА -->
+<div class="rta-chart-layout">
+    <!-- Панель Y оси (Слева) -->
+    <div class="axis-panel-y">
+        <button class="axis-btn" id="btnYZoomIn" title="Zoom In Y">+</button>
+        <input type="range" class="axis-scrollbar scrollbar-y" id="scrollY" min="0" max="100" value="50">
+        <button class="axis-btn" id="btnYZoomOut" title="Zoom Out Y">−</button>
+    </div>
+
+    <!-- Центральная колонка -->
+    <div class="chart-center-col">
+        <div class="rta-chart-wrapper">
+            <canvas id="rtaChart"></canvas>
+        </div>
+        <!-- Панель X оси (Снизу) -->
+        <div class="axis-panel-x">
+            <button class="axis-btn" id="btnXZoomOut" title="Zoom Out X">−</button>
+            <input type="range" class="axis-scrollbar scrollbar-x" id="scrollX" min="0" max="100" value="50">
+            <button class="axis-btn" id="btnXZoomIn" title="Zoom In X">+</button>
+        </div>
+    </div>
 </div>
 
                         <div class="info-box">
@@ -1148,6 +1319,14 @@
         const rtaCanvas = document.getElementById('rtaChart');
         const noiseFftSizeSel = document.getElementById('noiseFftSize');
 
+        // === ЭЛЕМЕНТЫ УПРАВЛЕНИЯ ОСЯМИ ===
+        const btnXZoomIn = document.getElementById('btnXZoomIn');
+        const btnXZoomOut = document.getElementById('btnXZoomOut');
+        const scrollX = document.getElementById('scrollX');
+        const btnYZoomIn = document.getElementById('btnYZoomIn');
+        const btnYZoomOut = document.getElementById('btnYZoomOut');
+        const scrollY = document.getElementById('scrollY');
+
         function ensureRtaChart() {
             if (!rtaCanvas || rtaChart) return;
 
@@ -1174,9 +1353,9 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: false, // Отключаем анимацию для RTA (real-time)
-                    parsing: false,   // Отключаем парсинг для ускорения
-                    normalized: true, // Данные уже нормализованы
+                    animation: false, 
+                    parsing: false,   
+                    normalized: true, 
                     plugins: { 
                         legend: { display: false },
                         tooltip: {
@@ -1190,19 +1369,36 @@
                                     return `${Math.round(point.x)} Гц: ${point.y.toFixed(1)} dB`;
                                 }
                             }
+                        },
+                        // === ДОБАВЛЕНО ДЛЯ МОБИЛЬНОГО ЗУМА (требует chartjs-plugin-zoom) ===
+                        zoom: {
+                            pan: {
+                                enabled: true,
+                                mode: 'xy', // Можно двигать по X и Y
+                            },
+                            zoom: {
+                                wheel: { enabled: true }, // Колесико мыши
+                                pinch: { enabled: true }, // Щипок на телефоне
+                                mode: 'xy',
+                            },
+                            limits: {
+                                x: {min: 10, max: 25000}, // Ограничение чтобы не улететь далеко
+                                y: {min: -140, max: 10}
+                            }
                         }
                     },
                     scales: {
                         x: { 
-                            type: rtaScaleType,
+                            type: rtaScaleType, // 'logarithmic' или 'linear'
                             min: 20,
                             max: 24000,
                             ticks: { 
                                 color: '#EAEAEA',
                                 autoSkip: true,
                                 maxTicksLimit: 20,
+                                // === ОКРУГЛЕНИЕ X ДО ЦЕЛЫХ ===
                                 callback: function(value) {
-                                    if (value < 1000) return value;
+                                    if (value < 1000) return Math.round(value); // 61.9 -> 62
                                     return (value/1000).toFixed(1) + 'k';
                                 }
                             }, 
@@ -1212,7 +1408,13 @@
                         y: { 
                             min: -120, 
                             max: 0,
-                            ticks: { color: '#EAEAEA' }, 
+                            ticks: { 
+                                color: '#EAEAEA',
+                                // === ОКРУГЛЕНИЕ Y ДО 0.1 ===
+                                callback: function(value) {
+                                    return value.toFixed(1); // -10 -> -10.0, -10.54 -> -10.5
+                                }
+                            }, 
                             grid: { color: 'rgba(255,255,255,0.06)' }, 
                             title: { display: true, text: 'Уровень (dB)', color: '#EAEAEA' }
                         }
@@ -1225,7 +1427,7 @@
                 }
             });
 
-            // === ЛОГИКА ЗУМА (ИСПРАВЛЕНА) ===
+            // === ЛОГИКА ЗУМА МЫШЬЮ ===
             let isDragging = false;
             let dragStart = { x: 0, y: 0 }; // Координаты в пикселях
             let dragRect = null;
@@ -1344,9 +1546,163 @@
                 e.preventDefault();
                 resetRtaZoom();
             });
+
+            // === ПРИВЯЗКА КНОПОК ЗУМА И СКРОЛЛА ===
+            setupAxisControls();
         }
 
-        function updateRtaChartScale() {
+        // === НОВАЯ ФУНКЦИЯ УПРАВЛЕНИЯ ОСЯМИ ===
+        function setupAxisControls() {
+            // Константы пределов
+            const X_MIN_GLOBAL = 20;
+            const X_MAX_GLOBAL = 24000;
+            const Y_MIN_GLOBAL = -120;
+            const Y_MAX_GLOBAL = 0;
+
+            // --- ZOOM X ---
+            btnXZoomIn.addEventListener('click', () => {
+                applyZoomX(0.5); // Zoom In (уменьшаем диапазон в 2 раза)
+            });
+            btnXZoomOut.addEventListener('click', () => {
+                applyZoomX(2.0); // Zoom Out (увеличиваем диапазон в 2 раза)
+            });
+
+            // --- SCROLL X (Pan) ---
+            scrollX.addEventListener('input', (e) => {
+                if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
+                
+                // Текущий логарифмический диапазон
+                const logMin = Math.log10(rtaZoomState.x.min);
+                const logMax = Math.log10(rtaZoomState.x.max);
+                const logRange = logMax - logMin;
+                
+                // Позиция слайдера 0..100 соответствует центру вида
+                const val = e.target.value / 100; // 0..1
+                
+                // Глобальный лог диапазон
+                const logGlobalMin = Math.log10(X_MIN_GLOBAL);
+                const logGlobalMax = Math.log10(X_MAX_GLOBAL);
+                const logGlobalRange = logGlobalMax - logGlobalMin;
+
+                // Новая позиция центра (в лог. координатах)
+                const newLogCenter = logGlobalMin + val * logGlobalRange;
+
+                // Вычисляем новые границы, сохраняя ширину зума
+                let newLogMin = newLogCenter - logRange / 2;
+                let newLogMax = newLogCenter + logRange / 2;
+
+                // Ограничиваем выход за пределы
+                if (newLogMin < logGlobalMin) {
+                    newLogMin = logGlobalMin;
+                    newLogMax = newLogMin + logRange;
+                }
+                if (newLogMax > logGlobalMax) {
+                    newLogMax = logGlobalMax;
+                    newLogMin = newLogMax - logRange;
+                }
+
+                rtaZoomState.x.min = Math.pow(10, newLogMin);
+                rtaZoomState.x.max = Math.pow(10, newLogMax);
+                updateRtaChartScale(false); // Не обновлять слайдеры, чтобы не было петли
+            });
+
+            // --- ZOOM Y ---
+            btnYZoomIn.addEventListener('click', () => {
+                applyZoomY(0.5);
+            });
+            btnYZoomOut.addEventListener('click', () => {
+                applyZoomY(2.0);
+            });
+
+            // --- SCROLL Y (Pan) ---
+            scrollY.addEventListener('input', (e) => {
+                if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
+                
+                const rangeY = rtaZoomState.y.max - rtaZoomState.y.min;
+                const val = e.target.value / 100; // 0..1
+
+                // Глобальные пределы
+                const globalRange = Y_MAX_GLOBAL - Y_MIN_GLOBAL;
+
+                // Новая позиция центра
+                const newCenter = Y_MIN_GLOBAL + val * globalRange;
+
+                let newMin = newCenter - rangeY / 2;
+                let newMax = newCenter + rangeY / 2;
+
+                // Ограничения
+                if (newMin < Y_MIN_GLOBAL) {
+                    newMin = Y_MIN_GLOBAL;
+                    newMax = newMin + rangeY;
+                }
+                if (newMax > Y_MAX_GLOBAL) {
+                    newMax = Y_MAX_GLOBAL;
+                    newMin = newMax - rangeY;
+                }
+
+                rtaZoomState.y.min = newMin;
+                rtaZoomState.y.max = newMax;
+                updateRtaChartScale(false);
+            });
+
+            // Хелперы зума
+            function applyZoomX(factor) {
+                if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
+                
+                // Логарифмический зум
+                let logMin = Math.log10(rtaZoomState.x.min);
+                let logMax = Math.log10(rtaZoomState.x.max);
+                let logCenter = (logMax + logMin) / 2;
+                let logRange = (logMax - logMin) * factor;
+
+                // Ограничение максимального зума (широкий диапазон)
+                const logGlobalRange = Math.log10(X_MAX_GLOBAL) - Math.log10(X_MIN_GLOBAL);
+                if (logRange > logGlobalRange) {
+                    logRange = logGlobalRange;
+                    logMin = Math.log10(X_MIN_GLOBAL);
+                    logMax = Math.log10(X_MAX_GLOBAL);
+                } else {
+                    logMin = logCenter - logRange / 2;
+                    logMax = logCenter + logRange / 2;
+                }
+
+                rtaZoomState.x.min = Math.pow(10, logMin);
+                rtaZoomState.x.max = Math.pow(10, logMax);
+                
+                // Если вылетели за глобальные пределы при Zoom Out, центрируем
+                if (rtaZoomState.x.min < X_MIN_GLOBAL || rtaZoomState.x.max > X_MAX_GLOBAL) {
+                    resetRtaZoom();
+                } else {
+                    updateRtaChartScale();
+                }
+            }
+
+            function applyZoomY(factor) {
+                if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
+                
+                let min = rtaZoomState.y.min;
+                let max = rtaZoomState.y.max;
+                let center = (max + min) / 2;
+                let range = (max - min) * factor;
+
+                // Лимиты диапазона
+                const globalRange = Y_MAX_GLOBAL - Y_MIN_GLOBAL;
+                if (range > globalRange) range = globalRange;
+
+                let newMin = center - range / 2;
+                let newMax = center + range / 2;
+
+                // Ограничение значений
+                newMin = Math.max(Y_MIN_GLOBAL, newMin);
+                newMax = Math.min(Y_MAX_GLOBAL, newMax);
+
+                rtaZoomState.y.min = newMin;
+                rtaZoomState.y.max = newMax;
+                updateRtaChartScale();
+            }
+        }
+
+        function updateRtaChartScale(updateScrollbars = true) {
             if (!rtaChart) return;
             
             // Обновляем тип шкалы
@@ -1369,6 +1725,40 @@
             }
             
             rtaChart.update('none');
+
+            // Синхронизация полос прокрутки
+            if (updateScrollbars) {
+                syncScrollbars();
+            }
+        }
+
+        function syncScrollbars() {
+            if (!scrollX || !scrollY) return;
+
+            const X_MIN_GLOBAL = 20;
+            const X_MAX_GLOBAL = 24000;
+            const Y_MIN_GLOBAL = -120;
+            const Y_MAX_GLOBAL = 0;
+
+            if (rtaZoomState) {
+                // X Axis (Logarithmic mapping)
+                const logMin = Math.log10(X_MIN_GLOBAL);
+                const logMax = Math.log10(X_MAX_GLOBAL);
+                const logCenter = (Math.log10(rtaZoomState.x.max) + Math.log10(rtaZoomState.x.min)) / 2;
+                
+                // Нормализуем позицию центра от 0 до 1
+                const xVal = ((logCenter - logMin) / (logMax - logMin)) * 100;
+                scrollX.value = xVal;
+
+                // Y Axis (Linear mapping)
+                const yCenter = (rtaZoomState.y.max + rtaZoomState.y.min) / 2;
+                const yVal = ((yCenter - Y_MIN_GLOBAL) / (Y_MAX_GLOBAL - Y_MIN_GLOBAL)) * 100;
+                scrollY.value = yVal;
+            } else {
+                // Если зума нет (полный обзор), слайдеры в центре
+                scrollX.value = 50;
+                scrollY.value = 50;
+            }
         }
 
         function resetRtaZoom() {
