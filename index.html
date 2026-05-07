@@ -896,6 +896,117 @@
         font-size: 0.8rem;
     }
 }
+
+/* ===== НОВЫЕ СТИЛИ ДЛЯ ВКЛАДКИ 5.1 CENTER REPLACER ===== */
+.cr-container {
+    max-width: 100%;
+    margin: 0;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.cr-drop-zone {
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px dashed var(--accent-cyan);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 0.5rem;
+}
+
+.cr-drop-zone.dragover {
+    background: rgba(0, 242, 254, 0.15);
+    border-color: var(--accent-lime);
+}
+
+.cr-drop-zone-text {
+    font-size: 1.2rem;
+    color: var(--accent-cyan);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.cr-file-info {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    opacity: 0.7;
+    word-break: break-word;
+}
+
+.cr-privacy-note {
+    font-size: 0.7rem;
+    color: var(--accent-lime);
+    background: rgba(0,0,0,0.2);
+    display: inline-block;
+    padding: 0.2rem 1rem;
+    border-radius: 20px;
+    margin-bottom: 1rem;
+}
+
+.cr-flex-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin: 1rem 0;
+}
+
+.cr-form-group {
+    flex: 1;
+    min-width: 180px;
+    background: rgba(0,0,0,0.2);
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(0,242,254,0.2);
+}
+
+.cr-form-group label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.85rem;
+    margin-bottom: 0.4rem;
+    color: var(--accent-lime);
+}
+
+.cr-form-group input, .cr-form-group select {
+    background: var(--bg-dark);
+    border: 1px solid rgba(0,242,254,0.3);
+    padding: 0.6rem;
+    border-radius: 8px;
+    color: white;
+    font-family: monospace;
+    width: 100%;
+}
+
+.cr-output-box {
+    background: #0b0e14;
+    padding: 1rem;
+    border-radius: 12px;
+    font-family: monospace;
+    font-size: 0.8rem;
+    white-space: pre-wrap;
+    word-break: break-all;
+    border-left: 4px solid var(--accent-cyan);
+    margin: 1rem 0;
+    color: #e2e8f0;
+}
+
+.cr-copy-btn {
+    background: linear-gradient(45deg, #bd93f9, #50fa7b);
+    border: none;
+    padding: 0.8rem 1.5rem;
+    border-radius: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+    color: #1e1e2f;
+    font-family: 'IBM Plex Mono', monospace;
+}
+
+.cr-copy-btn:hover {
+    transform: scale(0.98);
+    opacity: 0.9;
+}
     </style>
 </head>
 <body>
@@ -911,6 +1022,7 @@
             <button class="tab-btn" data-tab="generator">Генератор</button>
             <button class="tab-btn" data-tab="crossover">Кроссовер</button>
             <button class="tab-btn" data-tab="calculator">Калькулятор</button>
+            <button class="tab-btn" data-tab="centerReplacer">5.1 Center Replacer</button>
         </nav>
     </header>
 
@@ -942,6 +1054,11 @@
                     <div class="tool-card">
                         <h4>ПРОФЕССИОНАЛЬНЫЙ АНАЛИЗ</h4>
                         <p>Все инструменты используют точные алгоритмы и обеспечивают детальную визуализацию результатов в реальном времени.</p>
+                    </div>
+
+                    <div class="tool-card">
+                        <h4>5.1 CENTER REPLACER</h4>
+                        <p>Генератор команды FFmpeg для замены центрального канала в 5.1 аудиопотоке на моно-сумму из стереодорожки. Идеально для ремастеринга многоканального звука.</p>
                     </div>
                 </div>
                 
@@ -1212,6 +1329,47 @@
                             <strong>💡 Как это работает:</strong> При удвоении мощности SPL растет на 3 дБ. При удвоении расстояния SPL падает на 6 дБ.
                         </div>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- === НОВАЯ ВКЛАДКА: 5.1 CENTER REPLACER === -->
+        <section id="centerReplacer" class="tab-section">
+            <div class="section">
+                <h2>5.1 Center Replacer</h2>
+                <p>Генератор команды FFmpeg для замены центрального канала в 5.1 аудиопотоке на моно-сумму из стереодорожки.</p>
+                <div class="cr-container">
+                    <div class="cr-drop-zone" id="crDropZone">
+                        <div class="cr-drop-zone-text" id="crDropText">📂 Перетащите фильм сюда или кликните</div>
+                        <div class="cr-file-info" id="crFileInfo">Файл по умолчанию: фильм.mkv</div>
+                        <input type="file" id="crFileInput" style="display: none;" accept="video/*,.mkv,.mp4,.avi">
+                    </div>
+                    <div class="cr-privacy-note">Файл никуда не загружается. Обрабатывается только его название.</div>
+
+                    <div class="cr-flex-row">
+                        <div class="cr-form-group">
+                            <label title="Дорожка, из которой мы возьмем звук для центра">№ Стерео дорожки:</label>
+                            <input type="number" id="crStereoTrack" value="0" min="0">
+                        </div>
+                        <div class="cr-form-group">
+                            <label title="Дорожка 5.1, в которой мы будем менять центр">№ 5.1 дорожки:</label>
+                            <input type="number" id="crMultiTrack" value="1" min="0">
+                        </div>
+                    </div>
+
+                    <div class="cr-form-group" style="margin-bottom: 1rem;">
+                        <label for="crBitrate">Качество звука на выходе:</label>
+                        <select id="crBitrate">
+                            <option value="640k">640 kbps (Максимальное, Blu-ray)</option>
+                            <option value="384k" selected>384 kbps (Стандартное DVD)</option>
+                            <option value="448k">448 kbps (Золотая середина)</option>
+                        </select>
+                    </div>
+
+                    <label style="color: #50fa7b;">Готовая команда для консоли:</label>
+                    <div class="cr-output-box" id="crOutput"></div>
+
+                    <button class="cr-copy-btn" id="crCopyBtn">📋 Скопировать команду</button>
                 </div>
             </div>
         </section>
@@ -2865,6 +3023,90 @@ window.addEventListener('orientationchange', () => {
                 new SPLCalculatorUI();
             }
         });
+
+        // =================== НОВАЯ ФУНКЦИОНАЛЬНОСТЬ: 5.1 CENTER REPLACER ===================
+        (function() {
+            // Элементы
+            const dropZone = document.getElementById('crDropZone');
+            const fileInput = document.getElementById('crFileInput');
+            const dropText = document.getElementById('crDropText');
+            const fileInfo = document.getElementById('crFileInfo');
+            const stereoTrack = document.getElementById('crStereoTrack');
+            const multiTrack = document.getElementById('crMultiTrack');
+            const bitrateSelect = document.getElementById('crBitrate');
+            const outputBox = document.getElementById('crOutput');
+            const copyBtn = document.getElementById('crCopyBtn');
+            
+            let currentInputFile = "фильм.mkv";
+            let currentOutputFile = "фильм.ac3";
+            
+            function updateCommand() {
+                const stereo = stereoTrack.value || "0";
+                const multi = multiTrack.value || "1";
+                const bitrate = bitrateSelect.value;
+                const cmd = `ffmpeg -i "${currentInputFile}" -filter_complex "[0:a:${stereo}]pan=mono|c0=0.5*c0+0.5*c1,aresample=48000[new_center];[0:a:${multi}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];[fc_old]anullsink;[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]" -map "[aout]" -c:a ac3 -b:a ${bitrate} "${currentOutputFile}"`;
+                outputBox.innerText = cmd;
+            }
+            
+            function handleFile(file) {
+                if (!file) return;
+                currentInputFile = file.name;
+                const lastDotIndex = currentInputFile.lastIndexOf('.');
+                if (lastDotIndex === -1) {
+                    currentOutputFile = currentInputFile + ".ac3";
+                } else {
+                    currentOutputFile = currentInputFile.substring(0, lastDotIndex) + ".ac3";
+                }
+                fileInfo.innerText = `Выбран: ${currentInputFile}\nНа выходе будет: ${currentOutputFile}`;
+                dropText.innerText = "✅ Файл успешно выбран";
+                updateCommand();
+            }
+            
+            if (dropZone) {
+                dropZone.addEventListener('click', () => fileInput.click());
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('dragover');
+                });
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.classList.remove('dragover');
+                });
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) {
+                        handleFile(e.dataTransfer.files[0]);
+                    }
+                });
+            }
+            
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) handleFile(e.target.files[0]);
+                });
+            }
+            
+            if (stereoTrack) stereoTrack.addEventListener('input', updateCommand);
+            if (multiTrack) multiTrack.addEventListener('input', updateCommand);
+            if (bitrateSelect) bitrateSelect.addEventListener('change', updateCommand);
+            
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    const text = outputBox.innerText;
+                    navigator.clipboard.writeText(text).then(() => {
+                        const original = copyBtn.innerText;
+                        copyBtn.innerText = "✅ Скопировано!";
+                        copyBtn.style.background = "#50fa7b";
+                        setTimeout(() => {
+                            copyBtn.innerText = original;
+                            copyBtn.style.background = "linear-gradient(45deg, #bd93f9, #50fa7b)";
+                        }, 2000);
+                    });
+                });
+            }
+            
+            updateCommand();
+        })();        
         
         // =================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===================
         
@@ -2895,5 +3137,38 @@ window.addEventListener('orientationchange', () => {
             }
         });
     </script>
+    <!-- ========== ФУТЕР С БЛАГОДАРНОСТЯМИ ========== -->
+<footer style="
+    background: linear-gradient(135deg, #0f1219, #1A1D24);
+    border-top: 1px solid rgba(0, 242, 254, 0.3);
+    margin-top: 3rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+">
+    <div style="max-width: 800px; margin: 0 auto;">
+        <div style="font-size: 1.8rem; margin-bottom: 0.5rem;">🙏</div>
+        <h3 style="color: var(--accent-lime); font-size: 1.4rem; margin-bottom: 1rem;">Поддержать проект</h3>
+        <p style="color: #ccc; margin-bottom: 1rem;">
+            Если вам пригодился AudioLab Pro, вы можете сказать спасибо автору — любая сумма важна и вдохновляет на развитие.
+        </p>
+        <div style="
+            background: rgba(0, 0, 0, 0.4);
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            border-radius: 60px;
+            border: 1px solid var(--accent-cyan);
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-cyan);
+            word-break: break-all;
+        ">
+            💳 Сбер: 5469 5500 3410 7414
+        </div>
+        <p style="font-size: 0.75rem; color: #666; margin-top: 1.5rem;">
+            © AudioLab Pro · Инструменты для аудиоинженеров
+        </p>
+    </div>
+</footer>
 </body>
 </html>
