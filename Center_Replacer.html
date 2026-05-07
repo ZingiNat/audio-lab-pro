@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFmpeg 5.1 Center Replacer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2f;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #2a2a40;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            max-width: 600px;
+        }
+        h2 {
+            margin-top: 0;
+            color: #ff79c6;
+            text-align: center;
+        }
+        
+        /* Стили для зоны перетаскивания */
+        .drop-zone {
+            border: 2px dashed #6272a4;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            background-color: #1e1e2f;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+        .drop-zone.dragover {
+            border-color: #50fa7b;
+            background-color: #282a36;
+        }
+        .drop-zone:hover {
+            border-color: #bd93f9;
+        }
+        .drop-zone-text {
+            color: #8be9fd;
+            font-size: 16px;
+            font-weight: bold;
+            pointer-events: none;
+        }
+        .file-info {
+            color: #50fa7b;
+            font-size: 14px;
+            margin-top: 10px;
+            word-wrap: break-word;
+            pointer-events: none;
+        }
+
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #f1fa8c;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #44475a;
+            border-radius: 6px;
+            background-color: #1e1e2f;
+            color: #fff;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input[type="number"]:focus, select:focus { outline: 2px solid #bd93f9; border-color: transparent;}
+        
+        .flex-row { display: flex; gap: 15px; }
+        .flex-row .form-group { flex: 1; }
+        
+        .output-box {
+            background-color: #000000;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: Consolas, monospace;
+            word-wrap: break-word;
+            margin-top: 10px;
+            border: 1px solid #44475a;
+            color: #f8f8f2;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #bd93f9;
+            color: #282a36;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 15px;
+        }
+        button:hover { background-color: #ff79c6; }
+        
+        .privacy-note {
+            font-size: 11px;
+            color: #6272a4;
+            text-align: center;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Генератор команд FFmpeg</h2>
+    
+    <!-- Зона Drag & Drop -->
+    <div class="drop-zone" id="drop-zone">
+        <div class="drop-zone-text" id="drop-text">📂 Перетащите фильм сюда или кликните</div>
+        <div class="file-info" id="file-info">Файл по умолчанию: фильм.mkv</div>
+        <input type="file" id="file-input" style="display: none;" accept="video/*,.mkv,.mp4,.avi">
+    </div>
+    <div class="privacy-note">Файл никуда не загружается. Обрабатывается только его название.</div>
+
+    <div class="flex-row" style="margin-top: 20px;">
+        <div class="form-group">
+            <label title="Дорожка, из которой мы возьмем звук для центра">№ Стерео дорожки:</label>
+            <input type="number" id="stereo-track" value="0" min="0" oninput="generateCommand()">
+        </div>
+        <div class="form-group">
+            <label title="Дорожка 5.1, в которой мы будем менять центр">№ 5.1 дорожки:</label>
+            <input type="number" id="multi-track" value="1" min="0" oninput="generateCommand()">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="bitrate">Качество звука на выходе:</label>
+        <select id="bitrate" onchange="generateCommand()">
+            <option value="640k">640 kbps (Максимальное, Blu-ray)</option>
+            <option value="384k">384 kbps (Стандартное DVD)</option>
+            <option value="448k">448 kbps (Золотая середина)</option>
+        </select>
+    </div>
+
+    <label style="color: #50fa7b;">Готовая команда для консоли:</label>
+    <div class="output-box" id="output"></div>
+
+    <button onclick="copyToClipboard()">📋 Скопировать команду</button>
+</div>
+
+<script>
+    // Переменные по умолчанию
+    let currentInputFile = "фильм.mkv";
+    let currentOutputFile = "фильм.ac3";
+
+    // Логика обработки файла
+    function handleFile(file) {
+        if (!file) return;
+        currentInputFile = file.name;
+
+        // Отрезаем старое расширение и добавляем .ac3
+        const lastDotIndex = currentInputFile.lastIndexOf('.');
+        if (lastDotIndex === -1) {
+            currentOutputFile = currentInputFile + ".ac3"; // если файл без расширения
+        } else {
+            currentOutputFile = currentInputFile.substring(0, lastDotIndex) + ".ac3";
+        }
+
+        // Обновляем интерфейс
+        document.getElementById('file-info').innerText = `Выбран: ${currentInputFile}\nНа выходе будет: ${currentOutputFile}`;
+        document.getElementById('drop-text').innerText = "✅ Файл успешно выбран";
+        
+        generateCommand();
+    }
+
+    // Настройка Drag & Drop
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    // Клик по зоне открывает окно выбора файла
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    // Выбор файла через окно
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
+
+    // Эффекты при перетаскивании
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    // Отпускание файла
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Генерация команды
+    function generateCommand() {
+        const stereo = document.getElementById('stereo-track').value || "0";
+        const multi = document.getElementById('multi-track').value || "1";
+        const bitrate = document.getElementById('bitrate').value;
+
+        const cmd = `ffmpeg -i "${currentInputFile}" -filter_complex "[0:a:${stereo}]pan=mono|c0=0.5*c0+0.5*c1,aresample=48000[new_center];[0:a:${multi}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];[fc_old]anullsink;[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]" -map "[aout]" -c:a ac3 -b:a ${bitrate} "${currentOutputFile}"`;
+
+        document.getElementById('output').innerText = cmd;
+    }
+
+    // Копирование в буфер
+    function copyToClipboard() {
+        const textToCopy = document.getElementById('output').innerText;
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            const btn = document.querySelector('button');
+            const originalText = btn.innerText;
+            btn.innerText = "✅ Скопировано в буфер!";
+            btn.style.backgroundColor = "#50fa7b";
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.backgroundColor = "#bd93f9";
+            }, 2000);
+        });
+    }
+
+    // Запуск генерации при открытии страницы
+    window.onload = generateCommand;
+</script>
+
+</body>
+</html>
