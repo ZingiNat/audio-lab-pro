@@ -1337,7 +1337,7 @@
         <section id="centerReplacer" class="tab-section">
             <div class="section">
                 <h2>5.1 Center Replacer</h2>
-                <p>Генератор команды FFmpeg для замены центрального канала в 5.1 аудиопотоке на моно-сумму из стереодорожки.</p>
+                <p>Генератор команды FFmpeg для замены центрального канала в 5.1 аудиопотоке.</p>
                 <div class="cr-container">
                     <div class="cr-drop-zone" id="crDropZone">
                         <div class="cr-drop-zone-text" id="crDropText">📂 Перетащите фильм сюда или кликните</div>
@@ -1346,13 +1346,24 @@
                     </div>
                     <div class="cr-privacy-note">Файл никуда не загружается. Обрабатывается только его название.</div>
 
+                    <!-- Выбор режима замены -->
                     <div class="cr-flex-row">
                         <div class="cr-form-group">
-                            <label title="Дорожка, из которой мы возьмем звук для центра">№ Стерео дорожки:</label>
-                            <input type="number" id="crStereoTrack" value="0" min="0">
+                            <label>Режим замены:</label>
+                            <select id="crReplaceMode" style="width:100%">
+                                <option value="stereo">Стерео → Центр (моно-сумма)</option>
+                                <option value="center51">5.1 → Центр (из центрального канала)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="cr-flex-row">
+                        <div class="cr-form-group">
+                            <label title="Дорожка, из которой берется звук (стерео или 5.1)">№ Исходной дорожки:</label>
+                            <input type="number" id="crSourceTrack" value="0" min="0">
                         </div>
                         <div class="cr-form-group">
-                            <label title="Дорожка 5.1, в которой мы будем менять центр">№ 5.1 дорожки:</label>
+                            <label title="Целевая 5.1 дорожка, в которой заменяем центр">№ Целевой 5.1 дорожки:</label>
                             <input type="number" id="crMultiTrack" value="1" min="0">
                         </div>
                     </div>
@@ -3031,20 +3042,39 @@ window.addEventListener('orientationchange', () => {
             const fileInput = document.getElementById('crFileInput');
             const dropText = document.getElementById('crDropText');
             const fileInfo = document.getElementById('crFileInfo');
-            const stereoTrack = document.getElementById('crStereoTrack');
+            const sourceTrack = document.getElementById('crSourceTrack');
             const multiTrack = document.getElementById('crMultiTrack');
             const bitrateSelect = document.getElementById('crBitrate');
+            const replaceMode = document.getElementById('crReplaceMode');
             const outputBox = document.getElementById('crOutput');
             const copyBtn = document.getElementById('crCopyBtn');
             
             let currentInputFile = "фильм.mkv";
             let currentOutputFile = "фильм.ac3";
             
-            function updateCommand() {
-                const stereo = stereoTrack.value || "0";
-                const multi = multiTrack.value || "1";
+            function generateCommand() {
+                const srcIdx = sourceTrack.value || "0";
+                const dstIdx = multiTrack.value || "1";
                 const bitrate = bitrateSelect.value;
-                const cmd = `ffmpeg -i "${currentInputFile}" -filter_complex "[0:a:${stereo}]pan=mono|c0=0.5*c0+0.5*c1,aresample=48000[new_center];[0:a:${multi}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];[fc_old]anullsink;[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]" -map "[aout]" -c:a ac3 -b:a ${bitrate} "${currentOutputFile}"`;
+                const mode = replaceMode.value; // "stereo" или "center51"
+                
+                let filterComplex = "";
+                let outputFile = currentOutputFile;
+                
+                // Вторая часть графа (разборка целевой дорожки и склейка) ОДИНАКОВАЯ для обоих режимов
+                const destinationGraph = `[0:a:${dstIdx}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];` +
+                                         `[fc_old]anullsink;` +
+                                         `[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]`;
+                
+                if (mode === "stereo") {
+                    // Режим 1: Стерео → моно-сумма (смешиваем левый и правый)
+                    filterComplex = `[0:a:${srcIdx}]pan=mono|c0=0.5*c0+0.5*c1,aresample=48000[new_center];` + destinationGraph;
+                } else {
+                    // Режим 2: 5.1 → Центр (берем только канал FC - Front Center)
+                    filterComplex = `[0:a:${srcIdx}]pan=mono|c0=FC,aresample=48000[new_center];` + destinationGraph;
+                }
+                
+                const cmd = `ffmpeg -i "${currentInputFile}" -filter_complex "${filterComplex}" -map "[aout]" -c:a ac3 -b:a ${bitrate} "${outputFile}"`;
                 outputBox.innerText = cmd;
             }
             
@@ -3059,9 +3089,10 @@ window.addEventListener('orientationchange', () => {
                 }
                 fileInfo.innerText = `Выбран: ${currentInputFile}\nНа выходе будет: ${currentOutputFile}`;
                 dropText.innerText = "✅ Файл успешно выбран";
-                updateCommand();
+                generateCommand();
             }
             
+            // События
             if (dropZone) {
                 dropZone.addEventListener('click', () => fileInput.click());
                 dropZone.addEventListener('dragover', (e) => {
@@ -3086,9 +3117,10 @@ window.addEventListener('orientationchange', () => {
                 });
             }
             
-            if (stereoTrack) stereoTrack.addEventListener('input', updateCommand);
-            if (multiTrack) multiTrack.addEventListener('input', updateCommand);
-            if (bitrateSelect) bitrateSelect.addEventListener('change', updateCommand);
+            if (sourceTrack) sourceTrack.addEventListener('input', generateCommand);
+            if (multiTrack) multiTrack.addEventListener('input', generateCommand);
+            if (bitrateSelect) bitrateSelect.addEventListener('change', generateCommand);
+            if (replaceMode) replaceMode.addEventListener('change', generateCommand);
             
             if (copyBtn) {
                 copyBtn.addEventListener('click', () => {
@@ -3105,8 +3137,8 @@ window.addEventListener('orientationchange', () => {
                 });
             }
             
-            updateCommand();
-        })();        
+            generateCommand();
+        })();     
         
         // =================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===================
         
