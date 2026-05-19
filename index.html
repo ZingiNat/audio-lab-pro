@@ -897,7 +897,7 @@
     }
 }
 
-/* ===== НОВЫЕ СТИЛИ ДЛЯ ВКЛАДКИ 5.1 CENTER REPLACER ===== */
+<!-- ===== НОВЫЕ СТИЛИ ДЛЯ ВКЛАДКИ 5.1 CENTER REPLACER ===== -->
 .cr-container {
     max-width: 100%;
     margin: 0;
@@ -906,7 +906,7 @@
 
 .cr-drop-zone {
     background: rgba(0, 0, 0, 0.3);
-    border: 2px dashed var(--accent-cyan);
+    border: 2px dashed var(--accent-cyan, #00f2fe);
     border-radius: 16px;
     padding: 2rem;
     text-align: center;
@@ -917,26 +917,27 @@
 
 .cr-drop-zone.dragover {
     background: rgba(0, 242, 254, 0.15);
-    border-color: var(--accent-lime);
+    border-color: var(--accent-lime, #50fa7b);
 }
 
 .cr-drop-zone-text {
     font-size: 1.2rem;
-    color: var(--accent-cyan);
+    color: var(--accent-cyan, #00f2fe);
     font-weight: 500;
     margin-bottom: 0.5rem;
 }
 
 .cr-file-info {
     font-size: 0.85rem;
-    color: var(--text-light);
+    color: var(--text-light, #a0aec0);
     opacity: 0.7;
     word-break: break-word;
+    margin-top: 5px;
 }
 
 .cr-privacy-note {
     font-size: 0.7rem;
-    color: var(--accent-lime);
+    color: var(--accent-lime, #50fa7b);
     background: rgba(0,0,0,0.2);
     display: inline-block;
     padding: 0.2rem 1rem;
@@ -965,17 +966,18 @@
     font-family: 'IBM Plex Mono', monospace;
     font-size: 0.85rem;
     margin-bottom: 0.4rem;
-    color: var(--accent-lime);
+    color: var(--accent-lime, #50fa7b);
 }
 
 .cr-form-group input, .cr-form-group select {
-    background: var(--bg-dark);
+    background: var(--bg-dark, #1e1e2f);
     border: 1px solid rgba(0,242,254,0.3);
     padding: 0.6rem;
     border-radius: 8px;
     color: white;
     font-family: monospace;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .cr-output-box {
@@ -986,7 +988,7 @@
     font-size: 0.8rem;
     white-space: pre-wrap;
     word-break: break-all;
-    border-left: 4px solid var(--accent-cyan);
+    border-left: 4px solid var(--accent-cyan, #00f2fe);
     margin: 1rem 0;
     color: #e2e8f0;
 }
@@ -1001,6 +1003,7 @@
     transition: 0.2s;
     color: #1e1e2f;
     font-family: 'IBM Plex Mono', monospace;
+    width: 100%;
 }
 
 .cr-copy-btn:hover {
@@ -1337,7 +1340,7 @@
         <section id="centerReplacer" class="tab-section">
             <div class="section">
                 <h2>5.1 Center Replacer</h2>
-                <p>Генератор команды FFmpeg для замены центрального канала в 5.1 аудиопотоке.</p>
+                <p>Генератор команды FFmpeg для замены центрального канала в 5.1 аудиопотоке с возможностью синхронизации.</p>
                 <div class="cr-container">
                     <div class="cr-drop-zone" id="crDropZone">
                         <div class="cr-drop-zone-text" id="crDropText">📂 Перетащите фильм сюда или кликните</div>
@@ -1346,17 +1349,45 @@
                     </div>
                     <div class="cr-privacy-note">Файл никуда не загружается. Обрабатывается только его название.</div>
 
-                    <!-- Выбор режима замены -->
+                    <!-- ТЕСТОВЫЙ РЕЖИМ -->
+                    <div class="cr-form-group" style="margin-bottom: 10px; background: rgba(80, 250, 123, 0.1); border-color: rgba(80, 250, 123, 0.3);">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #50fa7b; margin: 0; font-size: 0.95rem;">
+                            <input type="checkbox" id="crTestMode" style="width: 20px; height: 20px; margin: 0; cursor: pointer;">
+                            <span>Вырезать короткий фрагмент для теста (замер рассинхрона)</span>
+                        </label>
+                    </div>
+
+                    <!-- Настройки тестового режима (скрыты по умолчанию) -->
+                    <div class="cr-flex-row" id="crTestConfig" style="display: none; margin-top: 0; margin-bottom: 1rem;">
+                        <div class="cr-form-group" style="border-color: rgba(80, 250, 123, 0.3);">
+                            <label>Начало (ЧЧ:ММ:СС):</label>
+                            <input type="text" id="crTestStart" value="00:10:00" placeholder="00:10:00">
+                            <div class="cr-file-info">Время, откуда начнем вырезать</div>
+                        </div>
+                        <div class="cr-form-group" style="border-color: rgba(80, 250, 123, 0.3);">
+                            <label>Длительность (сек):</label>
+                            <input type="number" id="crTestDuration" value="30" min="1">
+                            <div class="cr-file-info">Длина отрезка</div>
+                        </div>
+                    </div>
+
+                    <!-- Режим и Синхронизация -->
                     <div class="cr-flex-row">
                         <div class="cr-form-group">
                             <label>Режим замены:</label>
-                            <select id="crReplaceMode" style="width:100%">
+                            <select id="crReplaceMode">
                                 <option value="stereo">Стерео → Центр (моно-сумма)</option>
                                 <option value="center51">5.1 → Центр (из центрального канала)</option>
                             </select>
                         </div>
+                        <div class="cr-form-group">
+                            <label title="Сдвиг аудио для синхронизации с видео/оригиналом">Синхронизация (мс):</label>
+                            <input type="number" id="crSyncValue" value="0" min="-250" max="250" step="0.5">
+                            <div class="cr-file-info">- раньше (отрезка) / + позже (задержка)</div>
+                        </div>
                     </div>
 
+                    <!-- Дорожки -->
                     <div class="cr-flex-row">
                         <div class="cr-form-group">
                             <label title="Дорожка, из которой берется звук (стерео или 5.1)">№ Исходной дорожки:</label>
@@ -1368,6 +1399,7 @@
                         </div>
                     </div>
 
+                    <!-- Битрейт -->
                     <div class="cr-form-group" style="margin-bottom: 1rem;">
                         <label for="crBitrate">Качество звука на выходе:</label>
                         <select id="crBitrate">
@@ -3035,46 +3067,86 @@ window.addEventListener('orientationchange', () => {
             }
         });
 
-        // =================== НОВАЯ ФУНКЦИОНАЛЬНОСТЬ: 5.1 CENTER REPLACER ===================
+        // =================== ФУНКЦИОНАЛЬНОСТЬ: 5.1 CENTER REPLACER ===================
         (function() {
             // Элементы
             const dropZone = document.getElementById('crDropZone');
             const fileInput = document.getElementById('crFileInput');
             const dropText = document.getElementById('crDropText');
             const fileInfo = document.getElementById('crFileInfo');
+            
             const sourceTrack = document.getElementById('crSourceTrack');
             const multiTrack = document.getElementById('crMultiTrack');
             const bitrateSelect = document.getElementById('crBitrate');
             const replaceMode = document.getElementById('crReplaceMode');
+            const syncInput = document.getElementById('crSyncValue');
+            
+            // Новые элементы для тестового фрагмента
+            const testMode = document.getElementById('crTestMode');
+            const testConfig = document.getElementById('crTestConfig');
+            const testStart = document.getElementById('crTestStart');
+            const testDuration = document.getElementById('crTestDuration');
+
             const outputBox = document.getElementById('crOutput');
             const copyBtn = document.getElementById('crCopyBtn');
             
             let currentInputFile = "фильм.mkv";
             let currentOutputFile = "фильм.ac3";
             
+            // Показать/Скрыть блок настроек теста
+            testMode.addEventListener('change', () => {
+                testConfig.style.display = testMode.checked ? 'flex' : 'none';
+                generateCommand();
+            });
+            
             function generateCommand() {
                 const srcIdx = sourceTrack.value || "0";
                 const dstIdx = multiTrack.value || "1";
                 const bitrate = bitrateSelect.value;
-                const mode = replaceMode.value; // "stereo" или "center51"
+                const mode = replaceMode.value; 
+                const syncValue = parseFloat(syncInput.value) || 0;
                 
-                let filterComplex = "";
-                let outputFile = currentOutputFile;
+                let syncFilter = "";
+
+                // Логика задержки или ускорения ТОЛЬКО для Центра
+                if (syncValue > 0) {
+                    syncFilter = `,adelay=${syncValue}`;
+                } else if (syncValue < 0) {
+                    const sec = (Math.abs(syncValue) / 1000).toFixed(3);
+                    syncFilter = `,atrim=start=${sec},asetpts=PTS-STARTPTS`;
+                }
                 
-                // Вторая часть графа (разборка целевой дорожки и склейка) ОДИНАКОВАЯ для обоих режимов
+                // Построение filter_complex
                 const destinationGraph = `[0:a:${dstIdx}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];` +
                                          `[fc_old]anullsink;` +
                                          `[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]`;
                 
+                let filterComplex = "";
                 if (mode === "stereo") {
-                    // Режим 1: Стерео → моно-сумма (смешиваем левый и правый)
-                    filterComplex = `[0:a:${srcIdx}]pan=mono|c0=0.5*c0+0.5*c1,aresample=48000[new_center];` + destinationGraph;
+                    filterComplex = `[0:a:${srcIdx}]pan=mono|c0=0.5*c0+0.5*c1,aresample=48000${syncFilter}[new_center];` + destinationGraph;
                 } else {
-                    // Режим 2: 5.1 → Центр (берем только канал FC - Front Center)
-                    filterComplex = `[0:a:${srcIdx}]pan=mono|c0=FC,aresample=48000[new_center];` + destinationGraph;
+                    filterComplex = `[0:a:${srcIdx}]pan=mono|c0=FC,aresample=48000${syncFilter}[new_center];` + destinationGraph;
                 }
                 
-                const cmd = `ffmpeg -i "${currentInputFile}" -filter_complex "${filterComplex}" -map "[aout]" -c:a ac3 -b:a ${bitrate} "${outputFile}"`;
+                // Логика вырезки тестового фрагмента
+                let timeFlags = "";
+                let finalOutputFile = currentOutputFile;
+                let codecSettings = `-c:a ac3 -b:a ${bitrate}`; // Настройки по умолчанию (для релиза)
+                
+                if (testMode.checked) {
+                    const start = testStart.value || "00:10:00";
+                    const duration = testDuration.value || "30";
+                    timeFlags = `-ss ${start} -t ${duration} `; // Флаги перед -i
+                    
+                    // Для теста меняем расширение на .wav (читается везде) и кодек на pcm_s16le
+                    const lastDotIndex = currentInputFile.lastIndexOf('.');
+                    const baseName = lastDotIndex === -1 ? currentInputFile : currentInputFile.substring(0, lastDotIndex);
+                    finalOutputFile = baseName + '_test.wav';
+                    
+                    codecSettings = `-c:a pcm_s16le`; // Несжатый WAV без битрейта
+                }
+                
+                const cmd = `ffmpeg ${timeFlags}-i "${currentInputFile}" -vn -sn -filter_complex "${filterComplex}" -map "[aout]" ${codecSettings} "${finalOutputFile}"`;
                 outputBox.innerText = cmd;
             }
             
@@ -3092,7 +3164,7 @@ window.addEventListener('orientationchange', () => {
                 generateCommand();
             }
             
-            // События
+            // События Drag & Drop
             if (dropZone) {
                 dropZone.addEventListener('click', () => fileInput.click());
                 dropZone.addEventListener('dragover', (e) => {
@@ -3117,10 +3189,10 @@ window.addEventListener('orientationchange', () => {
                 });
             }
             
-            if (sourceTrack) sourceTrack.addEventListener('input', generateCommand);
-            if (multiTrack) multiTrack.addEventListener('input', generateCommand);
-            if (bitrateSelect) bitrateSelect.addEventListener('change', generateCommand);
-            if (replaceMode) replaceMode.addEventListener('change', generateCommand);
+            // Обновляем команду при любом изменении инпутов
+            [sourceTrack, multiTrack, bitrateSelect, replaceMode, syncInput, testStart, testDuration].forEach(el => {
+                if (el) el.addEventListener('input', generateCommand);
+            });
             
             if (copyBtn) {
                 copyBtn.addEventListener('click', () => {
@@ -3139,31 +3211,21 @@ window.addEventListener('orientationchange', () => {
             
             generateCommand();
         })();     
-        
+
         // =================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===================
-        
         document.addEventListener('DOMContentLoaded', function() {
-            // Активируем первую вкладку
-            document.querySelector('.tab-btn.active').click();
+            const activeTab = document.querySelector('.tab-btn.active');
+            if(activeTab) activeTab.click();
             
-            // Настройка начальных значений для генератора
-            if (frequencySlider) {
-                frequencySlider.value = 440;
-                frequencyDisplay.textContent = "440 Гц";
-            }
-            
-            if (volumeSlider) {
-                volumeSlider.value = 50;
-                volumeDisplay.textContent = "50%";
-            }
-            
-            // Автоматически скрываем меню на мобильных после выбора
             if (window.innerWidth <= 768) {
                 document.querySelectorAll('.tab-btn').forEach(btn => {
                     btn.addEventListener('click', () => {
-                        setTimeout(() => {
-                            navTabs.classList.remove('active');
-                        }, 300);
+                        const navTabs = document.getElementById('navTabs');
+                        if(navTabs) {
+                            setTimeout(() => {
+                                navTabs.classList.remove('active');
+                            }, 300);
+                        }
                     });
                 });
             }
