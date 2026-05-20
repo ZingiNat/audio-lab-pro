@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AudioLab Pro: симулятор кроссоверов и FFT анализатор спектра (RTA) онлайн</title>
     <meta name="description" content="Универсальная аудиолаборатория в браузере. Проектируйте кроссоверы (Линквица-Райли, Баттерворта) с графиками АЧХ/ФЧХ и анализируйте звук в реальном времени через микрофон (FFT/RTA). Генератор тонов и шумов, калькулятор SPL. Профессиональный инструмент для инженеров и энтузиастов.">    
-        
+    
     <link rel="icon" type="image/png" href="/favicon/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="shortcut icon" href="favicon.ico" />
@@ -16,425 +16,425 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 <!-- Плагин зума для Chart.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&family=Teko:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-    <style>
-        /* Глобальные стили */
-        :root {
-            --bg-dark: #1A1D24;
-            --bg-card: #2A2F3A;
-            --text-light: #EAEAEA;
-            --text-white: #FFFFFF;
-            --accent-cyan: #00F2FE;
-            --accent-fuchsia: #EC4899;
-            --accent-lime: #BEF264;
-            --accent-blue: #3B82F6;
-            --border-glow: rgba(0, 242, 254, 0.3);
-            --shadow-glow: 0 0 15px rgba(0, 242, 254, 0.2);
-        }
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&family=Teko:wght@300;400;500;600&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+    /* Глобальные стили */
+    :root {
+        --bg-dark: #1A1D24;
+        --bg-card: #2A2F3A;
+        --text-light: #EAEAEA;
+        --text-white: #FFFFFF;
+        --accent-cyan: #00F2FE;
+        --accent-fuchsia: #EC4899;
+        --accent-lime: #BEF264;
+        --accent-blue: #3B82F6;
+        --border-glow: rgba(0, 242, 254, 0.3);
+        --shadow-glow: 0 0 15px rgba(0, 242, 254, 0.2);
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
-        body {
-            font-family: 'Roboto Condensed', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-light);
-            line-height: 1.6;
-            min-height: 100vh;
-            padding-top: 70px; /* Отступ для фиксированной шапки */
-        }
+    body {
+        font-family: 'Roboto Condensed', sans-serif;
+        background-color: var(--bg-dark);
+        color: var(--text-light);
+        line-height: 1.6;
+        min-height: 100vh;
+        padding-top: 70px; /* Отступ для фиксированной шапки */
+    }
 
-        /* КОМПАКТНАЯ ФИКСИРОВАННАЯ ШАПКА */
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            background: rgba(26, 29, 36, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--border-glow);
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-            padding: 0.8rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 70px;
-        }
+    /* КОМПАКТНАЯ ФИКСИРОВАННАЯ ШАПКА */
+    .header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: rgba(26, 29, 36, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border-glow);
+        box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+        padding: 0.8rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 70px;
+    }
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
 
-        .logo {
-            font-family: 'Teko', sans-serif;
-            font-size: 1.8rem;
-            font-weight: 600;
-            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-fuchsia));
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            white-space: nowrap;
-        }
+    .logo {
+        font-family: 'Teko', sans-serif;
+        font-size: 1.8rem;
+        font-weight: 600;
+        background: linear-gradient(90deg, var(--accent-cyan), var(--accent-fuchsia));
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        white-space: nowrap;
+    }
 
-        /* Кнопка меню для мобильных */
-        .menu-toggle {
-            display: none;
-            background: transparent;
-            border: none;
-            color: var(--accent-cyan);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.5rem;
-        }
+    /* Кнопка меню для мобильных */
+    .menu-toggle {
+        display: none;
+        background: transparent;
+        border: none;
+        color: var(--accent-cyan);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+    }
 
-        /* Компактная навигация */
-        .tabs {
-            display: flex;
-            gap: 0.3rem;
-            align-items: center;
-        }
+    /* Компактная навигация */
+    .tabs {
+        display: flex;
+        gap: 0.3rem;
+        align-items: center;
+    }
 
-        .tab-btn {
-            background: rgba(42, 47, 58, 0.7);
-            border: 1px solid rgba(0, 242, 254, 0.2);
-            color: var(--text-light);
-            padding: 0.5rem 1rem;
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 500;
-            font-size: 0.9rem;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.3s ease;
-            white-space: nowrap;
-        }
+    .tab-btn {
+        background: rgba(42, 47, 58, 0.7);
+        border: 1px solid rgba(0, 242, 254, 0.2);
+        color: var(--text-light);
+        padding: 0.5rem 1rem;
+        font-family: 'IBM Plex Mono', monospace;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
 
-        .tab-btn:hover {
-            background: rgba(0, 242, 254, 0.1);
-            border-color: var(--accent-cyan);
-            transform: translateY(-1px);
-        }
+    .tab-btn:hover {
+        background: rgba(0, 242, 254, 0.1);
+        border-color: var(--accent-cyan);
+        transform: translateY(-1px);
+    }
 
-        .tab-btn.active {
-            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
-            color: var(--bg-dark);
-            border-color: var(--accent-cyan);
-            font-weight: 600;
-        }
+    .tab-btn.active {
+        background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+        color: var(--bg-dark);
+        border-color: var(--accent-cyan);
+        font-weight: 600;
+    }
 
-        /* Основной контент */
-        .main-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 1.5rem;
-        }
+    /* Основной контент */
+    .main-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
 
-        /* Секции (скрываем неактивные) */
-        .tab-section {
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
+    /* Секции (скрываем неактивные) */
+    .tab-section {
+        display: none;
+        animation: fadeIn 0.5s ease;
+    }
 
-        .tab-section.active {
-            display: block;
-        }
+    .tab-section.active {
+        display: block;
+    }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 
-        /* Карточки секций */
-        .section {
-            background-color: var(--bg-card);
-            border-radius: 12px;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            border: 1px solid rgba(0, 242, 254, 0.1);
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-        }
+    /* Карточки секций */
+    .section {
+        background-color: var(--bg-card);
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid rgba(0, 242, 254, 0.1);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    }
 
-        .section h2 {
-            font-family: 'Teko', sans-serif;
-            font-size: 2.2rem;
-            color: var(--accent-cyan);
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid rgba(0, 242, 254, 0.3);
-            padding-bottom: 0.5rem;
-        }
+    .section h2 {
+        font-family: 'Teko', sans-serif;
+        font-size: 2.2rem;
+        color: var(--accent-cyan);
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid rgba(0, 242, 254, 0.3);
+        padding-bottom: 0.5rem;
+    }
 
-        .section h3 {
-            font-family: 'Teko', sans-serif;
-            font-size: 1.8rem;
-            color: var(--accent-lime);
-            margin: 1.5rem 0 1rem;
-        }
+    .section h3 {
+        font-family: 'Teko', sans-serif;
+        font-size: 1.8rem;
+        color: var(--accent-lime);
+        margin: 1.5rem 0 1rem;
+    }
 
-        /* Главная страница */
-        .intro-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-        }
+    /* Главная страница */
+    .intro-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
 
-        .tool-card {
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            padding: 1.5rem;
-            border-left: 4px solid var(--accent-fuchsia);
-            transition: transform 0.3s ease;
-        }
+    .tool-card {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 10px;
+        padding: 1.5rem;
+        border-left: 4px solid var(--accent-fuchsia);
+        transition: transform 0.3s ease;
+    }
 
-        .tool-card:hover {
-            transform: translateY(-5px);
-            border-left-color: var(--accent-cyan);
-        }
+    .tool-card:hover {
+        transform: translateY(-5px);
+        border-left-color: var(--accent-cyan);
+    }
 
-        .tool-card h4 {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 1.4rem;
-            color: var(--text-white);
-            margin-bottom: 0.8rem;
-        }
+    .tool-card h4 {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 1.4rem;
+        color: var(--text-white);
+        margin-bottom: 0.8rem;
+    }
 
-        .tool-card p {
-            color: var(--text-light);
-            opacity: 0.9;
-            line-height: 1.5;
-        }
+    .tool-card p {
+        color: var(--text-light);
+        opacity: 0.9;
+        line-height: 1.5;
+    }
 
-        /* Стили для генератора частот */
-        .generator-controls {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-        }
+    /* Стили для генератора частот */
+    .generator-controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
 
-        .control-group {
-            margin-bottom: 1.5rem;
-        }
+    .control-group {
+        margin-bottom: 1.5rem;
+    }
 
-        .control-group label {
-            display: block;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 1rem;
-            margin-bottom: 0.5rem;
-            color: var(--accent-lime);
-        }
+    .control-group label {
+        display: block;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+        color: var(--accent-lime);
+    }
 
-        input[type="range"] {
-            width: 100%;
-            height: 8px;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.1);
-            outline: none;
-            -webkit-appearance: none;
-            margin-bottom: 0.5rem;
-        }
+    input[type="range"] {
+        width: 100%;
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        outline: none;
+        -webkit-appearance: none;
+        margin-bottom: 0.5rem;
+    }
 
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, var(--accent-cyan), var(--accent-blue));
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
-        }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, var(--accent-cyan), var(--accent-blue));
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+    }
 
-        input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, var(--accent-cyan), var(--accent-blue));
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
-        }
+    input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, var(--accent-cyan), var(--accent-blue));
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+    }
 
-        .value-display {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 1.2rem;
-            color: var(--accent-cyan);
-            text-align: center;
-            margin: 0.5rem 0;
-            padding: 0.5rem;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 6px;
-            border: 1px solid rgba(0, 242, 254, 0.2);
-        }
+    .value-display {
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 1.2rem;
+        color: var(--accent-cyan);
+        text-align: center;
+        margin: 0.5rem 0;
+        padding: 0.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+        border: 1px solid rgba(0, 242, 254, 0.2);
+    }
 
-        .buttons-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.8rem;
-            margin-top: 1rem;
-        }
+    .buttons-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin-top: 1rem;
+    }
 
-        .btn {
-            padding: 0.8rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 500;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            flex: 1;
-            min-width: 120px;
-        }
+    .btn {
+        padding: 0.8rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-weight: 500;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        flex: 1;
+        min-width: 120px;
+    }
 
-        .btn-tone {
-            background: linear-gradient(45deg, var(--accent-blue), #4f46e5);
-            color: white;
-        }
+    .btn-tone {
+        background: linear-gradient(45deg, var(--accent-blue), #4f46e5);
+        color: white;
+    }
 
-        .btn-tone:hover {
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
-            transform: translateY(-2px);
-        }
+    .btn-tone:hover {
+        box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+        transform: translateY(-2px);
+    }
 
-        .btn-tone.active {
-            background: linear-gradient(45deg, var(--accent-fuchsia), #db2777);
-        }
+    .btn-tone.active {
+        background: linear-gradient(45deg, var(--accent-fuchsia), #db2777);
+    }
 
-        .btn-noise {
-            background: linear-gradient(45deg, #10b981, #059669);
-            color: white;
-        }
+    .btn-noise {
+        background: linear-gradient(45deg, #10b981, #059669);
+        color: white;
+    }
 
-        .btn-noise:hover {
-            box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
-            transform: translateY(-2px);
-        }
+    .btn-noise:hover {
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.4);
+        transform: translateY(-2px);
+    }
 
-        .btn-noise.active {
-            background: linear-gradient(45deg, var(--accent-fuchsia), #db2777);
-        }
+    .btn-noise.active {
+        background: linear-gradient(45deg, var(--accent-fuchsia), #db2777);
+    }
 
-        .btn-stop {
-            background: linear-gradient(45deg, #ef4444, #dc2626);
-            color: white;
-            width: 100%;
-            margin-top: 0.5rem;
-        }
+    .btn-stop {
+        background: linear-gradient(45deg, #ef4444, #dc2626);
+        color: white;
+        width: 100%;
+        margin-top: 0.5rem;
+    }
 
-        .btn-stop:hover {
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
-            transform: translateY(-2px);
-        }
+    .btn-stop:hover {
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+        transform: translateY(-2px);
+    }
 
-        /* Стили для симулятора кроссовера */
-        .crossover-layout {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-        }
+    /* Стили для симулятора кроссовера */
+    .crossover-layout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
 
-        .crossover-controls {
-            flex: 1;
-            min-width: 320px;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 1.5rem;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 242, 254, 0.2);
-        }
+    .crossover-controls {
+        flex: 1;
+        min-width: 320px;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1.5rem;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 242, 254, 0.2);
+    }
 
-        .crossover-charts {
-            flex: 2;
-            min-width: 500px;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
+    .crossover-charts {
+        flex: 2;
+        min-width: 500px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
 
-        .chart-container {
-            background: rgba(0, 0, 0, 0.2);
-            padding: 1.5rem;
-            border-radius: 10px;
-            border: 1px solid rgba(0, 242, 254, 0.2);
-            height: 350px;
-            position: relative;
-        }
+    .chart-container {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 1.5rem;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 242, 254, 0.2);
+        height: 350px;
+        position: relative;
+    }
 
-        .preset-buttons {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 0.5rem;
-            border-radius: 8px;
-        }
+    .preset-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 0.5rem;
+        border-radius: 8px;
+    }
 
-        .preset-btn {
-            flex: 1;
-            padding: 0.8rem;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            border-radius: 6px;
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 600;
-            color: var(--text-light);
-            transition: 0.2s;
-        }
+    .preset-btn {
+        flex: 1;
+        padding: 0.8rem;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        border-radius: 6px;
+        font-family: 'IBM Plex Mono', monospace;
+        font-weight: 600;
+        color: var(--text-light);
+        transition: 0.2s;
+    }
 
-        .preset-btn.active {
-            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
-            color: var(--bg-dark);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-        }
+    .preset-btn.active {
+        background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+        color: var(--bg-dark);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    }
 
-        .control-row {
-            margin-bottom: 1rem;
-        }
+    .control-row {
+        margin-bottom: 1rem;
+    }
 
-        .control-row label {
-            display: flex;
-            justify-content: space-between;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            color: var(--text-light);
-        }
+    .control-row label {
+        display: flex;
+        justify-content: space-between;
+        font-family: 'IBM Plex Mono', monospace;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-light);
+    }
 
-        .control-row .value {
-            color: var(--accent-cyan);
-            font-weight: bold;
-        }
+    .control-row .value {
+        color: var(--accent-cyan);
+        font-weight: bold;
+    }
 
-        .toggle-group {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            background: rgba(255, 243, 205, 0.1);
-            padding: 1rem;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 238, 186, 0.1);
-        }
+    .toggle-group {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        background: rgba(255, 243, 205, 0.1);
+        padding: 1rem;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 238, 186, 0.1);
+    }
 
-        .info-box {
-            font-size: 0.8rem;
-            color: var(--text-light);
-            background: rgba(248, 249, 250, 0.1);
-            padding: 0.8rem;
-            border-radius: 4px;
-            margin-top: 0.5rem;
-            border-left: 3px solid var(--accent-cyan);
-        }
+    .info-box {
+        font-size: 0.8rem;
+        color: var(--text-light);
+        background: rgba(248, 249, 250, 0.1);
+        padding: 0.8rem;
+        border-radius: 4px;
+        margin-top: 0.5rem;
+        border-left: 3px solid var(--accent-cyan);
+    }
 
 /* ОБНОВЛЕННЫЕ СТИЛИ SPL КАЛЬКУЛЯТОРА */
 .spl-container {
@@ -519,168 +519,168 @@
     }
 }
 
-        /* Адаптивность */
-        @media (max-width: 1100px) {
-            .crossover-layout {
-                flex-direction: column;
-            }
-            
-            .crossover-charts {
-                min-width: 100%;
-            }
-            
-            .chart-container {
-                height: 300px;
-            }
-        }
+/* Адаптивность */
+@media (max-width: 1100px) {
+    .crossover-layout {
+        flex-direction: column;
+    }
+    
+    .crossover-charts {
+        min-width: 100%;
+    }
+    
+    .chart-container {
+        height: 300px;
+    }
+}
 
-        @media (max-width: 768px) {
-            body {
-                padding-top: 60px;
-            }
-            
-            .header {
-                height: 60px;
-                padding: 0.5rem 1rem;
-            }
-            
-            .logo {
-                font-size: 1.5rem;
-            }
-            
-            /* Мобильное меню */
-            .menu-toggle {
-                display: block;
-            }
-            
-            .tabs {
-                position: fixed;
-                top: 60px;
-                left: 0;
-                right: 0;
-                background: rgba(26, 29, 36, 0.98);
-                backdrop-filter: blur(20px);
-                flex-direction: column;
-                padding: 1rem;
-                gap: 0.5rem;
-                border-bottom: 1px solid var(--border-glow);
-                box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-                transform: translateY(-100%);
-                opacity: 0;
-                visibility: hidden;
-                transition: all 0.3s ease;
-                z-index: 999;
-            }
-            
-            .tabs.active {
-                transform: translateY(0);
-                opacity: 1;
-                visibility: visible;
-            }
-            
-            .tab-btn {
-                width: 100%;
-                text-align: center;
-                padding: 0.8rem;
-            }
-            
-            .main-content {
-                padding: 1rem;
-            }
-            
-            .section {
-                padding: 1.5rem;
-            }
-            
-            .section h2 {
-                font-size: 1.8rem;
-            }
-            
-            .chart-container {
-                height: 250px;
-                padding: 1rem;
-            }
-            
-            .generator-controls, .calculator-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+@media (max-width: 768px) {
+    body {
+        padding-top: 60px;
+    }
+    
+    .header {
+        height: 60px;
+        padding: 0.5rem 1rem;
+    }
+    
+    .logo {
+        font-size: 1.5rem;
+    }
+    
+    /* Мобильное меню */
+    .menu-toggle {
+        display: block;
+    }
+    
+    .tabs {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        background: rgba(26, 29, 36, 0.98);
+        backdrop-filter: blur(20px);
+        flex-direction: column;
+        padding: 1rem;
+        gap: 0.5rem;
+        border-bottom: 1px solid var(--border-glow);
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+        transform: translateY(-100%);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        z-index: 999;
+    }
+    
+    .tabs.active {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .tab-btn {
+        width: 100%;
+        text-align: center;
+        padding: 0.8rem;
+    }
+    
+    .main-content {
+        padding: 1rem;
+    }
+    
+    .section {
+        padding: 1.5rem;
+    }
+    
+    .section h2 {
+        font-size: 1.8rem;
+    }
+    
+    .chart-container {
+        height: 250px;
+        padding: 1rem;
+    }
+    
+    .generator-controls, .calculator-grid {
+        grid-template-columns: 1fr;
+    }
+}
 
-        @media (max-width: 480px) {
-            body {
-                padding-top: 55px;
-            }
-            
-            .header {
-                height: 55px;
-            }
-            
-            .logo {
-                font-size: 1.3rem;
-            }
-            
-            .section {
-                padding: 1rem;
-            }
-            
-            .section h2 {
-                font-size: 1.6rem;
-            }
-            
-            .buttons-container {
-                flex-direction: column;
-            }
-            
-            .btn {
-                width: 100%;
-            }
-        }
+@media (max-width: 480px) {
+    body {
+        padding-top: 55px;
+    }
+    
+    .header {
+        height: 55px;
+    }
+    
+    .logo {
+        font-size: 1.3rem;
+    }
+    
+    .section {
+        padding: 1rem;
+    }
+    
+    .section h2 {
+        font-size: 1.6rem;
+    }
+    
+    .buttons-container {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
 
-        /* --- CSS для секции RTA --- */
-        .rta-controls-row {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-        }
+/* --- CSS для секции RTA --- */
+.rta-controls-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
 
-        .rta-control-item {
-            flex: 1;
-            min-width: 200px;
-        }
+.rta-control-item {
+    flex: 1;
+    min-width: 200px;
+}
 
-        /* Стилизация выпадающих списков */
-        .select-control {
-            width: 100%;
-            padding: 0.8rem;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(0, 242, 254, 0.3);
-            border-radius: 6px;
-            color: var(--text-white);
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 0.95rem;
-            cursor: pointer;
-        }
+/* Стилизация выпадающих списков */
+.select-control {
+    width: 100%;
+    padding: 0.8rem;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(0, 242, 254, 0.3);
+    border-radius: 6px;
+    color: var(--text-white);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.95rem;
+    cursor: pointer;
+}
 
-        .select-control:focus {
-            outline: none;
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
-        }
+.select-control:focus {
+    outline: none;
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+}
 
-        /* Темный фон для опций внутри выпадающего списка */
-        .select-control option {
-            background-color: var(--bg-card); /* Темно-серый фон */
-            color: var(--text-white);         /* Белый текст */
-            padding: 10px;
-        }
-        
-        .correction-info {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--accent-lime);
-            margin-top: 0.2rem;
-        }
+/* Темный фон для опций внутри выпадающего списка */
+.select-control option {
+    background-color: var(--bg-card); /* Темно-серый фон */
+    color: var(--text-white);         /* Белый текст */
+    padding: 10px;
+}
+
+.correction-info {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--accent-lime);
+    margin-top: 0.2rem;
+}
 
 /* ИСПРАВЛЕННЫЕ СТИЛИ КОНТЕЙНЕРОВ */
 .section {
@@ -1010,7 +1010,7 @@
     transform: scale(0.98);
     opacity: 0.9;
 }
-    </style>
+</style>
 </head>
 <body>
     <!-- КОМПАКТНАЯ ФИКСИРОВАННАЯ ШАПКА -->
@@ -1096,7 +1096,7 @@
                                     <option value="16384">16384</option>
                                 </select>
                             </div>
-                        
+                            
                             <div class="rta-input-wrapper">
                                 <label for="rtaSmoothingOct">Сглаживание (1/n окт):</label>
                                 <select id="rtaSmoothingOct" class="select-control">
@@ -1108,7 +1108,7 @@
                                     <option value="24">1/24 окт</option>
                                 </select>
                             </div>
-                        
+                            
                             <div class="rta-input-wrapper">
                                 <label>Дополнительно:</label>
                                 <label class="custom-checkbox-box" for="pinkNoiseCorrection">
@@ -1125,28 +1125,28 @@
                             <button class="btn btn-tone" id="rtaResetZoom">Сбросить зум</button>
                         </div>
 
-<!-- НОВАЯ СТРУКТУРА RTA ГРАФИКА -->
-<div class="rta-chart-layout">
-    <!-- Панель Y оси (Слева) -->
-    <div class="axis-panel-y">
-        <button class="axis-btn" id="btnYZoomIn" title="Zoom In Y">+</button>
-        <input type="range" class="axis-scrollbar scrollbar-y" id="scrollY" min="0" max="100" value="50">
-        <button class="axis-btn" id="btnYZoomOut" title="Zoom Out Y">−</button>
-    </div>
+                        <!-- НОВАЯ СТРУКТУРА RTA ГРАФИКА -->
+                        <div class="rta-chart-layout">
+                            <!-- Панель Y оси (Слева) -->
+                            <div class="axis-panel-y">
+                                <button class="axis-btn" id="btnYZoomIn" title="Zoom In Y">+</button>
+                                <input type="range" class="axis-scrollbar scrollbar-y" id="scrollY" min="0" max="100" value="50">
+                                <button class="axis-btn" id="btnYZoomOut" title="Zoom Out Y">−</button>
+                            </div>
 
-    <!-- Центральная колонка -->
-    <div class="chart-center-col">
-        <div class="rta-chart-wrapper">
-            <canvas id="rtaChart"></canvas>
-        </div>
-        <!-- Панель X оси (Снизу) -->
-        <div class="axis-panel-x">
-            <button class="axis-btn" id="btnXZoomOut" title="Zoom Out X">−</button>
-            <input type="range" class="axis-scrollbar scrollbar-x" id="scrollX" min="0" max="100" value="50">
-            <button class="axis-btn" id="btnXZoomIn" title="Zoom In X">+</button>
-        </div>
-    </div>
-</div>
+                            <!-- Центральная колонка -->
+                            <div class="chart-center-col">
+                                <div class="rta-chart-wrapper">
+                                    <canvas id="rtaChart"></canvas>
+                                </div>
+                                <!-- Панель X оси (Снизу) -->
+                                <div class="axis-panel-x">
+                                    <button class="axis-btn" id="btnXZoomOut" title="Zoom Out X">−</button>
+                                    <input type="range" class="axis-scrollbar scrollbar-x" id="scrollX" min="0" max="100" value="50">
+                                    <button class="axis-btn" id="btnXZoomIn" title="Zoom In X">+</button>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="info-box">
                             <strong>Примечание:</strong> FFT размер синхронизируется с генератором шумов. Используйте мышь для выделения области на графике для увеличения (зум). Кнопка переключения меняет шкалу частот между линейной и логарифмической. Коррекция розового шума применяется автоматически при анализе розового шума.
@@ -1296,17 +1296,17 @@
                             <label>Мощность системы: <span id="val-power" class="value-display">100 Вт</span></label>
                             <input type="range" id="spl-power" min="1" max="2000" value="100" oninput="updateSPL()">
                         </div>
-            
+                        
                         <div class="control-group">
                             <label>Чувствительность (дБ/Вт/м): <span id="val-sens" class="value-display">90 дБ</span></label>
                             <input type="range" id="spl-sens" min="70" max="110" value="90" oninput="updateSPL()">
                         </div>
-            
+                        
                         <div class="control-group">
                             <label>Расстояние до слушателя: <span id="val-dist" class="value-display">5 м</span></label>
                             <input type="range" id="spl-dist" min="0.5" max="50" step="0.5" value="5" oninput="updateSPL()">
                         </div>
-            
+                        
                         <div class="result-box">
                             <h4>ИТОГОВЫЙ SPL</h4>
                             <div id="spl-total-val" class="result-value">-- дБ</div>
@@ -1316,7 +1316,7 @@
                             </div>
                         </div>
                     </div>
-            
+                    
                     <!-- Правая колонка: Визуализация -->
                     <div class="spl-visual-container">
                         <div class="spl-visualizer" id="spl-viz">
@@ -1349,7 +1349,7 @@
                     </div>
                     <div class="cr-privacy-note">Файл никуда не загружается. Обрабатывается только его название.</div>
 
-                    <!-- ТЕСТОВЫЙ РЕЖИМ -->
+                    <!-- <!-- ТЕСТОВЫЙ РЕЖИМ -->
                     <div class="cr-form-group" style="margin-bottom: 10px; background: rgba(80, 250, 123, 0.1); border-color: rgba(80, 250, 123, 0.3);">
                         <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #50fa7b; margin: 0; font-size: 0.95rem;">
                             <input type="checkbox" id="crTestMode" style="width: 20px; height: 20px; margin: 0; cursor: pointer;">
@@ -1399,17 +1399,26 @@
                         </div>
                     </div>
 
-                    <!-- Битрейт -->
-                    <div class="cr-form-group" style="margin-bottom: 1rem;">
-                        <label for="crBitrate">Качество звука на выходе:</label>
-                        <select id="crBitrate">
-                            <option value="640k" selected>640 kbps (Максимальное, Blu-ray)</option>
-                            <option value="384k">384 kbps (Стандартное DVD)</option>
-                            <option value="448k">448 kbps (Золотая середина)</option>
-                        </select>
+                    <!-- Битрейт и Инверсия -->
+                    <div class="cr-flex-row" style="align-items: center;">
+                        <div class="cr-form-group" style="margin-bottom: 0;">
+                            <label for="crBitrate">Качество звука на выходе:</label>
+                            <select id="crBitrate">
+                                <option value="640k" selected>640 kbps (Максимальное, Blu-ray)</option>
+                                <option value="384k">384 kbps (Стандартное DVD)</option>
+                                <option value="448k">448 kbps (Золотая середина)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="cr-form-group" style="margin-bottom: 0; background: transparent; border: 1px dashed rgba(0,242,254,0.3);">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #8be9fd; margin: 0; font-size: 0.85rem;">
+                                <input type="checkbox" id="crInvertPhase" style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
+                                <span title="Умножение аудиосигнала на -1. Помогает избежать частотных конфликтов (эффекта трубы)">Инвертировать фазу центрального канала</span>
+                            </label>
+                        </div>
                     </div>
 
-                    <label style="color: #50fa7b;">Готовая команда для консоли:</label>
+                    <label style="color: #50fa7b; margin-top: 1.5rem; display: block;">Готовая команда для консоли:</label>
                     <div class="cr-output-box" id="crOutput"></div>
 
                     <button class="cr-copy-btn" id="crCopyBtn">📋 Скопировать команду</button>
@@ -1629,7 +1638,7 @@
             });
 
             // === ЛОГИКА ЗУМА МЫШЬЮ ===
-            let isDragging = false;
+let isDragging = false;
             let dragStart = { x: 0, y: 0 }; // Координаты в пикселях
             let dragRect = null;
 
@@ -1650,7 +1659,7 @@
                 if (coords.x < chartArea.left || coords.x > chartArea.right || 
                     coords.y < chartArea.top || coords.y > chartArea.bottom) return;
 
-                isDragging = true;
+                    isDragging = true;
                 dragStart = coords;
 
                 // Создаем визуальный прямоугольник
@@ -2282,11 +2291,11 @@
             const bufferSize = 2 * audioContext.sampleRate;
             const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
             const output = noiseBuffer.getChannelData(0);
-        
+            
             for (let i = 0; i < bufferSize; i++) {
                 output[i] = Math.random() * 2 - 1;
             }
-        
+            
             return noiseBuffer;
         }
         
@@ -2296,7 +2305,7 @@
             const output = noiseBuffer.getChannelData(0);
             
             let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-        
+            
             for (let i = 0; i < bufferSize; i++) {
                 const white = Math.random() * 2 - 1;
                 b0 = 0.99886 * b0 + white * 0.0555179;
@@ -2309,7 +2318,7 @@
                 output[i] *= 0.11;
                 b6 = white * 0.115926;
             }
-        
+            
             return noiseBuffer;
         }
         
@@ -2319,14 +2328,14 @@
             const output = noiseBuffer.getChannelData(0);
             
             let lastOut = 0.0;
-        
+            
             for (let i = 0; i < bufferSize; i++) {
                 const white = Math.random() * 2 - 1;
                 output[i] = (lastOut + (0.02 * white)) / 1.02;
                 lastOut = output[i];
                 output[i] *= 3.5;
             }
-        
+            
             return noiseBuffer;
         }
         
@@ -2336,26 +2345,26 @@
             
             let noiseBuffer;
             switch(type) {
-                case 'white':
-                    noiseBuffer = createWhiteNoise();
-                    whiteNoiseBtn.classList.add('active');
+            case 'white':
+                noiseBuffer = createWhiteNoise();
+                whiteNoiseBtn.classList.add('active');
                     // Для белого шума не включаем коррекцию
-                    if (pinkNoiseCorrection) pinkNoiseCorrection.checked = false;
-                    break;
-                case 'pink':
-                    noiseBuffer = createPinkNoise();
-                    pinkNoiseBtn.classList.add('active');
+                if (pinkNoiseCorrection) pinkNoiseCorrection.checked = false;
+                break;
+            case 'pink':
+                noiseBuffer = createPinkNoise();
+                pinkNoiseBtn.classList.add('active');
                     // Для розового шума включаем коррекцию
-                    if (pinkNoiseCorrection) pinkNoiseCorrection.checked = true;
-                    break;
-                case 'brown':
-                    noiseBuffer = createBrownNoise();
-                    brownNoiseBtn.classList.add('active');
+                if (pinkNoiseCorrection) pinkNoiseCorrection.checked = true;
+                break;
+            case 'brown':
+                noiseBuffer = createBrownNoise();
+                brownNoiseBtn.classList.add('active');
                     // Для коричневого шума не включаем коррекцию
-                    if (pinkNoiseCorrection) pinkNoiseCorrection.checked = false;
-                    break;
+                if (pinkNoiseCorrection) pinkNoiseCorrection.checked = false;
+                break;
             }
-        
+            
             noiseSource = audioContext.createBufferSource();
             noiseSource.buffer = noiseBuffer;
             noiseSource.loop = true;
@@ -2412,30 +2421,30 @@
         });
 
         // Автоматическая подстройка размера графика при изменении ориентации
-window.addEventListener('resize', () => {
-    if (rtaChart) {
-        rtaChart.resize();
-    }
-});
+        window.addEventListener('resize', () => {
+            if (rtaChart) {
+                rtaChart.resize();
+            }
+        });
 
 // Дополнительная функция для "умной" высоты
-function adjustChartHeight() {
-    const wrapper = document.querySelector('.rta-chart-wrapper');
-    if (window.innerHeight < 500 && window.orientation !== 0) {
+        function adjustChartHeight() {
+            const wrapper = document.querySelector('.rta-chart-wrapper');
+            if (window.innerHeight < 500 && window.orientation !== 0) {
         // Если телефон горизонтально
-        wrapper.style.height = '85vh';
-    } else {
+                wrapper.style.height = '85vh';
+            } else {
         // Если вертикально
-        wrapper.style.height = window.innerWidth < 768 ? '300px' : '400px';
-    }
-}
+                wrapper.style.height = window.innerWidth < 768 ? '300px' : '400px';
+            }
+        }
 
-window.addEventListener('orientationchange', () => {
-    setTimeout(() => {
-        adjustChartHeight();
-        if (rtaChart) rtaChart.resize();
-    }, 200);
-});
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => {
+                adjustChartHeight();
+                if (rtaChart) rtaChart.resize();
+            }, 200);
+        });
         
         // =================== СИМУЛЯТОР КРОССОВЕРА ===================
         
@@ -2469,9 +2478,9 @@ window.addEventListener('orientationchange', () => {
             const k = Math.pow(10, Att/20);
             const R_ser = R_load * (1 - 1/k);
             const R_par = (k > 1.01) ? R_load * (1 / (k - 1)) : 100000; // Avoid div by zero
-        
+            
             const data = { freq: [], spl_lp: [], spl_hp: [], spl_sum: [], phase_lp: [], phase_hp: [], imp: [] };
-        
+            
             freqs.forEach(f => {
                 // --- LOW PASS SECTION ---
                 // Circuit: Source -> L1 -> Node -> (C1 || Load)
@@ -2484,7 +2493,7 @@ window.addEventListener('orientationchange', () => {
                 
                 // Transfer Function H_LP = V_out / V_in = Z_Par / (Z_L1 + Z_Par)
                 const H_LP = Z_LP_Par.div(Z_LP_Total);
-        
+                
                 // --- HIGH PASS SECTION ---
                 // Circuit: Source -> C2 -> Node -> (L2 || (R_ser + (R_par || Tweeter)))
                 // First, calc effective load of Tweeter + L-Pad
@@ -2496,7 +2505,7 @@ window.addEventListener('orientationchange', () => {
                 const Z_T_net = par(Z_T, Z_Rpar);
                 // + R_ser
                 const Z_Load_Eff = Z_Rser.add(Z_T_net);
-        
+                
                 const Z_C2 = jwC_inv(C2, f);
                 const Z_L2 = jwL(L2, f);
                 
@@ -2511,18 +2520,18 @@ window.addEventListener('orientationchange', () => {
                 // V_tweeter = V_filter_out * (Z_T_net / (R_ser + Z_T_net))
                 const H_LPad = Z_T_net.div(Z_Load_Eff);
                 H_HP = H_HP.mult(H_LPad);
-        
+                
                 // Invert Polarity if checked
                 if (Invert) {
                     H_HP = new Complex(-H_HP.re, -H_HP.im);
                 }
-        
+                
                 // --- SUMMATION ---
                 const H_Sum = H_LP.add(H_HP);
-        
+                
                 // --- TOTAL IMPEDANCE (Parallel Connection at Amp) ---
                 const Z_System = par(Z_LP_Total, Z_HP_Total);
-        
+                
                 // Store Data
                 data.freq.push(f);
                 data.spl_lp.push(20 * Math.log10(H_LP.abs() + 1e-9));
@@ -2534,7 +2543,7 @@ window.addEventListener('orientationchange', () => {
                 
                 data.imp.push(Z_System.abs());
             });
-        
+            
             return { data, R_ser, R_par };
         }
         
@@ -2598,15 +2607,15 @@ window.addEventListener('orientationchange', () => {
             crossoverDisplays.freq.textContent = freq;
             const att = parseFloat(crossoverInputs.att.value);
             crossoverDisplays.att.textContent = "-" + att.toFixed(1) + " dB";
-        
+            
             let L1, C1, L2, C2;
-        
+            
             if (crossoverInputs.lock.checked) {
                 // Auto-calculate components
                 const vals = getStandardValues(freq, R_load, currentCrossoverMode);
                 L1 = vals.L; C1 = vals.C;
                 L2 = vals.L; C2 = vals.C;
-        
+                
                 // Update range inputs
                 crossoverInputs.l1.value = L1; crossoverInputs.c1.value = C1;
                 crossoverInputs.l2.value = L2; crossoverInputs.c2.value = C2;
@@ -2617,22 +2626,22 @@ window.addEventListener('orientationchange', () => {
                 L2 = parseFloat(crossoverInputs.l2.value);
                 C2 = parseFloat(crossoverInputs.c2.value);
             }
-        
+            
             // Display values
             crossoverDisplays.l1.textContent = L1.toFixed(2);
             crossoverDisplays.c1.textContent = C1.toFixed(2);
             crossoverDisplays.l2.textContent = L2.toFixed(2);
             crossoverDisplays.c2.textContent = C2.toFixed(2);
-        
+            
             // Run Sim
             const freqs = [];
             for(let i=20; i<=20000; i*=1.1) freqs.push(i);
+                
+                const res = calculateSystem(freqs, { L1, C1, L2, C2, Att: att, Invert: crossoverInputs.invert.checked });
             
-            const res = calculateSystem(freqs, { L1, C1, L2, C2, Att: att, Invert: crossoverInputs.invert.checked });
-        
             // Update L-Pad Text
             crossoverDisplays.lpad.textContent = `L-Pad Резисторы: Посл = ${res.R_ser.toFixed(2)} Ом, Парал = ${res.R_par.toFixed(2)} Ом`;
-        
+            
             // Draw
             drawCrossoverCharts(res.data);
         }
@@ -2737,11 +2746,11 @@ window.addEventListener('orientationchange', () => {
                     animation: false
                 }
             });
-        
+            
             // Phase & Impedance Chart
             const ctxPI = document.getElementById('phaseImpChart').getContext('2d');
             if (phaseImpChartInstance) phaseImpChartInstance.destroy();
-        
+            
             phaseImpChartInstance = new Chart(ctxPI, {
                 type: 'line',
                 data: {
@@ -2851,41 +2860,41 @@ window.addEventListener('orientationchange', () => {
                     animation: false
                 }
             });
-        }
-        
+}
+
         // Инициализация кроссовера при загрузке
-        if (document.getElementById('freq')) {
+if (document.getElementById('freq')) {
             // Устанавливаем начальные значения для ползунков
-            crossoverInputs.l1.min = 0.05;
-            crossoverInputs.l1.max = 5.0;
-            crossoverInputs.l1.step = 0.01;
-            
-            crossoverInputs.c1.min = 0.1;
-            crossoverInputs.c1.max = 30;
-            crossoverInputs.c1.step = 0.1;
-            
-            crossoverInputs.l2.min = 0.05;
-            crossoverInputs.l2.max = 5.0;
-            crossoverInputs.l2.step = 0.01;
-            
-            crossoverInputs.c2.min = 0.1;
-            crossoverInputs.c2.max = 30;
-            crossoverInputs.c2.step = 0.1;
-            
+    crossoverInputs.l1.min = 0.05;
+    crossoverInputs.l1.max = 5.0;
+    crossoverInputs.l1.step = 0.01;
+    
+    crossoverInputs.c1.min = 0.1;
+    crossoverInputs.c1.max = 30;
+    crossoverInputs.c1.step = 0.1;
+    
+    crossoverInputs.l2.min = 0.05;
+    crossoverInputs.l2.max = 5.0;
+    crossoverInputs.l2.step = 0.01;
+    
+    crossoverInputs.c2.min = 0.1;
+    crossoverInputs.c2.max = 30;
+    crossoverInputs.c2.step = 0.1;
+    
             // Запускаем начальный расчет
-            setTimeout(updateCrossoverCalc, 500);
-        }
-        
+    setTimeout(updateCrossoverCalc, 500);
+}
+
 // =================== ОБНОВЛЕННЫЙ КАЛЬКУЛЯТОР SPL ===================
 
         /**
          * КОНФИГУРАЦИЯ И КОНСТАНТЫ
          * Выносим настройки наверх, чтобы их легко было править, не лезая в логику.
          */
-        const CONFIG = {
+const CONFIG = {
             // Смешанная шкала: Фибоначчи + Стандартные аудио-значения
             // Это дает "логарифмическое ощущение" но с красивыми круглыми числами.
-            POWER_SCALE: [
+    POWER_SCALE: [
                 1, 2, 3, 5, 8, 10, 13, 15, 20, 21, 25, 30, 34, 40, 50, 55, // Низкая громкость
                 60, 75, 80, 89, 100, 110, 120, 125, 144, 150, 175, 200,    // Средняя
                 233, 250, 300, 350, 377, 400, 500, 600, 610, 700, 750,     // Высокая
@@ -2914,7 +2923,7 @@ window.addEventListener('orientationchange', () => {
                 const spl = sens + (10 * Math.log10(power)) - (20 * Math.log10(distance));
                 return Math.max(0, spl); // Не может быть меньше 0
             },
-        
+            
             /**
              * Определение статуса опасности
              */
@@ -2925,7 +2934,7 @@ window.addEventListener('orientationchange', () => {
                 if (spl < 120) return { text: "ОПАСНО: Риск повреждения слуха!", color: CONFIG.COLORS.DANGER };
                 return { text: "КРИТИЧНО: Болевой порог! Немедленная травма.", color: CONFIG.COLORS.CRITICAL };
             },
-        
+            
             /**
              * Логарифмическая нормализация для UI (движение ползунков)
              * Преобразует value (например, дистанцию) в % (0-100) по логарифмической шкале
@@ -2963,10 +2972,10 @@ window.addEventListener('orientationchange', () => {
                         container: document.querySelector('.spl-calculator-section') || document.body 
                     }
                 };
-        
+                
                 this.init();
             }
-        
+            
             init() {
                 // Настройка слайдера мощности под размер нашего массива
                 const powerSlider = this.dom.inputs.power;
@@ -2977,23 +2986,23 @@ window.addEventListener('orientationchange', () => {
                 // Устанавливаем дефолтное значение 100 Вт
                 const defaultIndex = CONFIG.POWER_SCALE.indexOf(100);
                 powerSlider.value = defaultIndex !== -1 ? defaultIndex : 10;
-        
+                
                 // Навешиваем обработчики
                 this.addListeners();
                 
                 // Первичный рендер
                 this.update();
             }
-        
+            
             addListeners() {
                 // Используем стрелочную функцию, чтобы сохранить контекст 'this'
                 const handleChange = () => this.update();
-        
+                
                 Object.values(this.dom.inputs).forEach(input => {
                     input.addEventListener('input', handleChange);
                 });
             }
-        
+            
             update() {
                 // 1. Считываем данные
                 const powerIndex = parseInt(this.dom.inputs.power.value, 10);
@@ -3001,16 +3010,16 @@ window.addEventListener('orientationchange', () => {
                 
                 const S = parseFloat(this.dom.inputs.sens.value);
                 const D = parseFloat(this.dom.inputs.dist.value);
-        
+                
                 // 2. Считаем математику (через чистую функцию)
                 const spl = AudioMath.calculateSPL(P, S, D);
                 const state = AudioMath.getSafetyState(spl);
-        
+                
                 // 3. Рендерим UI
                 this.renderText(P, S, D, spl, state);
                 this.renderVisuals(P, D, spl, state);
             }
-        
+            
             renderText(P, S, D, spl, state) {
                 // Обновление цифр
                 this.dom.displays.valPower.textContent = `${P} Вт`;
@@ -3019,11 +3028,11 @@ window.addEventListener('orientationchange', () => {
                 this.dom.displays.total.textContent = `${spl.toFixed(1)} дБ`;
                 this.dom.displays.desc.textContent = state.text;
             }
-        
+            
             renderVisuals(P, D, spl, state) {
                 const { displays } = this.dom;
                 const color = state.color;
-        
+                
                 // 1. Цветовая индикация (ГЛАВНОЕ ИСПРАВЛЕНИЕ)
                 displays.total.style.color = color;
                 displays.desc.style.color = color;
@@ -3031,19 +3040,19 @@ window.addEventListener('orientationchange', () => {
                 
                 // Опционально: Если вы используете мои предыдущие CSS переменные
                 displays.container.style.setProperty('--spl-current-color', color);
-        
+                
                 // 2. Шкала опасности (0-100% ширины)
                 // Максимум берем 140 дБ как потолок
                 const dangerPercent = Math.min(100, (spl / 140) * 100);
                 displays.dangerBar.style.width = `${dangerPercent}%`;
-        
+                
                 // 3. Позиция слушателя (Логарифмическая шкала)
                 // Дистанция от 0.5 до 50м мапится в 15% - 85% ширины блока
                 const logPos = AudioMath.toLogPercent(D, 0.5, 50);
                 // clamp между 5% и 95% чтобы не вылезал
                 const safePos = Math.max(5, Math.min(95, 15 + (logPos * 0.7))); 
                 displays.visualListener.style.left = `${safePos}%`;
-        
+                
                 // 4. Волны (Скорость и Цвет)
                 displays.waves.forEach(w => {
                     w.style.borderColor = color; // Возвращаем цвет волнам
@@ -3080,6 +3089,7 @@ window.addEventListener('orientationchange', () => {
             const bitrateSelect = document.getElementById('crBitrate');
             const replaceMode = document.getElementById('crReplaceMode');
             const syncInput = document.getElementById('crSyncValue');
+            const invertPhase = document.getElementById('crInvertPhase'); // Новый чекбокс
             
             // Новые элементы для тестового фрагмента
             const testMode = document.getElementById('crTestMode');
@@ -3105,6 +3115,7 @@ window.addEventListener('orientationchange', () => {
                 const bitrate = bitrateSelect.value;
                 const mode = replaceMode.value; 
                 const syncValue = parseFloat(syncInput.value) || 0;
+                const isInverted = invertPhase.checked;
                 
                 let syncFilter = "";
 
@@ -3116,120 +3127,126 @@ window.addEventListener('orientationchange', () => {
                     syncFilter = `,atrim=start=${sec},asetpts=PTS-STARTPTS`;
                 }
                 
-                // Построение filter_complex
+                // Построение filter_complex (Вторая часть - разбор 5.1)
                 const destinationGraph = `[0:a:${dstIdx}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];` +
-                                         `[fc_old]anullsink;` +
-                                         `[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]`;
-                
-                let filterComplex = "";
-                if (mode === "stereo") {
-                    filterComplex = `[0:a:${srcIdx}]pan=mono|c0=0.5*c0+0.5*c1,aresample=48000${syncFilter}[new_center];` + destinationGraph;
-                } else {
-                    filterComplex = `[0:a:${srcIdx}]pan=mono|c0=FC,aresample=48000${syncFilter}[new_center];` + destinationGraph;
-                }
-                
+            `[fc_old]anullsink;` +
+        `[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]`;
+        
+                // Первая часть - формирование нового центра (с учетом инверсии фазы)
+        let panFilter = "";
+        if (mode === "stereo") {
+                    // Если инверсия включена, умножаем на -0.5, иначе на 0.5
+            const formula = isInverted ? "c0=-0.5*c0-0.5*c1" : "c0=0.5*c0+0.5*c1";
+            panFilter = `pan=mono|${formula}`;
+        } else {
+                    // Если инверсия включена, умножаем канал FC на -1, иначе просто берем FC
+            const formula = isInverted ? "c0=-1*FC" : "c0=FC";
+            panFilter = `pan=mono|${formula}`;
+        }
+        
+        const filterComplex = `[0:a:${srcIdx}]${panFilter},aresample=48000${syncFilter}[new_center];` + destinationGraph;
+        
                 // Логика вырезки тестового фрагмента
-                let timeFlags = "";
-                let finalOutputFile = currentOutputFile;
-                let codecSettings = `-c:a ac3 -b:a ${bitrate}`; // Настройки по умолчанию (для релиза)
-                
-                if (testMode.checked) {
-                    const start = testStart.value || "00:10:00";
-                    const duration = testDuration.value || "30";
-                    timeFlags = `-ss ${start} -t ${duration} `; // Флаги перед -i
-                    
-                    // Для теста меняем расширение на .wav (читается везде) и кодек на pcm_s16le
-                    const lastDotIndex = currentInputFile.lastIndexOf('.');
-                    const baseName = lastDotIndex === -1 ? currentInputFile : currentInputFile.substring(0, lastDotIndex);
-                    finalOutputFile = baseName + '_test.wav';
-                    
-                    codecSettings = `-c:a pcm_s16le`; // Несжатый WAV без битрейта
-                }
-                
-                const cmd = `ffmpeg ${timeFlags}-i "${currentInputFile}" -vn -sn -filter_complex "${filterComplex}" -map "[aout]" ${codecSettings} "${finalOutputFile}"`;
-                outputBox.innerText = cmd;
-            }
+        let timeFlags = "";
+        let finalOutputFile = currentOutputFile;
+        let codecSettings = `-c:a ac3 -b:a ${bitrate}`; 
+        
+        if (testMode.checked) {
+            const start = testStart.value || "00:10:00";
+            const duration = testDuration.value || "30";
+            timeFlags = `-ss ${start} -t ${duration} `; 
             
-            function handleFile(file) {
-                if (!file) return;
-                currentInputFile = file.name;
-                const lastDotIndex = currentInputFile.lastIndexOf('.');
-                if (lastDotIndex === -1) {
-                    currentOutputFile = currentInputFile + ".ac3";
-                } else {
-                    currentOutputFile = currentInputFile.substring(0, lastDotIndex) + ".ac3";
-                }
-                fileInfo.innerText = `Выбран: ${currentInputFile}\nНа выходе будет: ${currentOutputFile}`;
-                dropText.innerText = "✅ Файл успешно выбран";
-                generateCommand();
-            }
+            const lastDotIndex = currentInputFile.lastIndexOf('.');
+            const baseName = lastDotIndex === -1 ? currentInputFile : currentInputFile.substring(0, lastDotIndex);
+            finalOutputFile = baseName + '_test.wav';
             
+            codecSettings = `-c:a pcm_s16le`; 
+        }
+        
+        const cmd = `ffmpeg ${timeFlags}-i "${currentInputFile}" -vn -sn -filter_complex "${filterComplex}" -map "[aout]" ${codecSettings} "${finalOutputFile}"`;
+        outputBox.innerText = cmd;
+    }
+    
+    function handleFile(file) {
+        if (!file) return;
+        currentInputFile = file.name;
+        const lastDotIndex = currentInputFile.lastIndexOf('.');
+        if (lastDotIndex === -1) {
+            currentOutputFile = currentInputFile + ".ac3";
+        } else {
+            currentOutputFile = currentInputFile.substring(0, lastDotIndex) + ".ac3";
+        }
+        fileInfo.innerText = `Выбран: ${currentInputFile}\nНа выходе будет: ${currentOutputFile}`;
+        dropText.innerText = "✅ Файл успешно выбран";
+        generateCommand();
+    }
+    
             // События Drag & Drop
-            if (dropZone) {
-                dropZone.addEventListener('click', () => fileInput.click());
-                dropZone.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    dropZone.classList.add('dragover');
-                });
-                dropZone.addEventListener('dragleave', () => {
-                    dropZone.classList.remove('dragover');
-                });
-                dropZone.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    dropZone.classList.remove('dragover');
-                    if (e.dataTransfer.files.length > 0) {
-                        handleFile(e.dataTransfer.files[0]);
-                    }
-                });
-            }
-            
-            if (fileInput) {
-                fileInput.addEventListener('change', (e) => {
-                    if (e.target.files.length > 0) handleFile(e.target.files[0]);
-                });
-            }
-            
-            // Обновляем команду при любом изменении инпутов
-            [sourceTrack, multiTrack, bitrateSelect, replaceMode, syncInput, testStart, testDuration].forEach(el => {
-                if (el) el.addEventListener('input', generateCommand);
-            });
-            
-            if (copyBtn) {
-                copyBtn.addEventListener('click', () => {
-                    const text = outputBox.innerText;
-                    navigator.clipboard.writeText(text).then(() => {
-                        const original = copyBtn.innerText;
-                        copyBtn.innerText = "✅ Скопировано!";
-                        copyBtn.style.background = "#50fa7b";
-                        setTimeout(() => {
-                            copyBtn.innerText = original;
-                            copyBtn.style.background = "linear-gradient(45deg, #bd93f9, #50fa7b)";
-                        }, 2000);
-                    });
-                });
-            }
-            
-            generateCommand();
-        })();     
-
-        // =================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===================
-        document.addEventListener('DOMContentLoaded', function() {
-            const activeTab = document.querySelector('.tab-btn.active');
-            if(activeTab) activeTab.click();
-            
-            if (window.innerWidth <= 768) {
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const navTabs = document.getElementById('navTabs');
-                        if(navTabs) {
-                            setTimeout(() => {
-                                navTabs.classList.remove('active');
-                            }, 300);
-                        }
-                    });
-                });
+    if (dropZone) {
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
             }
         });
-    </script>
+    }
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) handleFile(e.target.files[0]);
+        });
+    }
+    
+            // Обновляем команду при любом изменении инпутов (добавлен invertPhase)
+    [sourceTrack, multiTrack, bitrateSelect, replaceMode, syncInput, testStart, testDuration, invertPhase].forEach(el => {
+        if (el) el.addEventListener('input', generateCommand);
+    });
+    
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            const text = outputBox.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const original = copyBtn.innerText;
+                copyBtn.innerText = "✅ Скопировано!";
+                copyBtn.style.background = "#50fa7b";
+                setTimeout(() => {
+                    copyBtn.innerText = original;
+                    copyBtn.style.background = "linear-gradient(45deg, #bd93f9, #50fa7b)";
+                }, 2000);
+            });
+        });
+    }
+    
+    generateCommand();
+})();     
+
+        // =================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===================
+document.addEventListener('DOMContentLoaded', function() {
+    const activeTab = document.querySelector('.tab-btn.active');
+    if(activeTab) activeTab.click();
+    
+    if (window.innerWidth <= 768) {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const navTabs = document.getElementById('navTabs');
+                if(navTabs) {
+                    setTimeout(() => {
+                        navTabs.classList.remove('active');
+                    }, 300);
+                }
+            });
+        });
+    }
+});
+</script>
 </body>
 </html>
