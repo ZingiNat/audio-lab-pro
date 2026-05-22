@@ -1010,6 +1010,110 @@
     transform: scale(0.98);
     opacity: 0.9;
 }
+
+/* ===== НОВЫЕ СТИЛИ ДЛЯ КНОПОК И СЛАЙДЕРА ===== */
+.cr-counter-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cr-counter-btn {
+    background: rgba(0, 242, 254, 0.1);
+    border: 1px solid rgba(0, 242, 254, 0.3);
+    color: var(--accent-cyan, #00f2fe);
+    border-radius: 8px;
+    width: 38px;
+    height: 38px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.cr-counter-btn:hover {
+    background: var(--accent-cyan, #00f2fe);
+    color: #1e1e2f;
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+}
+
+/* Кнопки быстрых пресетов времени */
+.cr-preset-container {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.cr-preset-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-light, #a0aec0);
+    padding: 3px 8px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: monospace;
+}
+
+.cr-preset-btn:hover {
+    background: var(--accent-lime, #50fa7b);
+    color: #1e1e2f;
+    border-color: var(--accent-lime, #50fa7b);
+}
+
+/* Кастомизация слайдера синхронизации */
+.cr-range-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #1e1e2f;
+    outline: none;
+    border: 1px solid rgba(0, 242, 254, 0.3) !important;
+    padding: 0 !important;
+}
+
+.cr-range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--accent-cyan, #00f2fe);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0, 242, 254, 0.8);
+    transition: transform 0.1s;
+}
+
+.cr-range-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+/* Кнопка сброса всех настроек */
+.cr-reset-btn {
+    background: rgba(255, 85, 85, 0.1);
+    border: 1px solid rgba(255, 85, 85, 0.3);
+    color: #ff5555;
+    padding: 0.8rem 1.5rem;
+    border-radius: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'IBM Plex Mono', monospace;
+    flex: 1;
+}
+
+.cr-reset-btn:hover {
+    background: #ff5555;
+    color: #1e1e2f;
+    box-shadow: 0 0 10px rgba(255, 85, 85, 0.5);
+    transform: scale(0.98);
+}
 </style>
 </head>
 <body>
@@ -1349,7 +1453,7 @@
                     </div>
                     <div class="cr-privacy-note">Файл никуда не загружается. Обрабатывается только его название.</div>
 
-                    <!-- <!-- ТЕСТОВЫЙ РЕЖИМ -->
+                    <!-- ТЕСТОВЫЙ РЕЖИМ -->
                     <div class="cr-form-group" style="margin-bottom: 10px; background: rgba(80, 250, 123, 0.1); border-color: rgba(80, 250, 123, 0.3);">
                         <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #50fa7b; margin: 0; font-size: 0.95rem;">
                             <input type="checkbox" id="crTestMode" style="width: 20px; height: 20px; margin: 0; cursor: pointer;">
@@ -1357,17 +1461,26 @@
                         </label>
                     </div>
 
-                    <!-- Настройки тестового режима (скрыты по умолчанию) -->
+                    <!-- Настройки тестового режима -->
                     <div class="cr-flex-row" id="crTestConfig" style="display: none; margin-top: 0; margin-bottom: 1rem;">
                         <div class="cr-form-group" style="border-color: rgba(80, 250, 123, 0.3);">
                             <label>Начало (ЧЧ:ММ:СС):</label>
-                            <input type="text" id="crTestStart" value="00:10:00" placeholder="00:10:00">
-                            <div class="cr-file-info">Время, откуда начнем вырезать</div>
+                            <input type="text" id="crTestStart" value="00:10:00" placeholder="00:10:00" style="text-align: center;">
+                            <div class="cr-preset-container">
+                                <button type="button" class="cr-preset-btn" onclick="shiftTime(-600)">-10м</button>
+                                <button type="button" class="cr-preset-btn" onclick="shiftTime(-60)">-1м</button>
+                                <button type="button" class="cr-preset-btn" onclick="shiftTime(60)">+1м</button>
+                                <button type="button" class="cr-preset-btn" onclick="shiftTime(600)">+10м</button>
+                            </div>
                         </div>
                         <div class="cr-form-group" style="border-color: rgba(80, 250, 123, 0.3);">
                             <label>Длительность (сек):</label>
-                            <input type="number" id="crTestDuration" value="30" min="1">
-                            <div class="cr-file-info">Длина отрезка</div>
+                            <input type="number" id="crTestDuration" value="30" min="1" style="text-align: center;">
+                            <div class="cr-preset-container">
+                                <button type="button" class="cr-preset-btn" onclick="setPreset('crTestDuration', 10)">10с</button>
+                                <button type="button" class="cr-preset-btn" onclick="setPreset('crTestDuration', 30)">30с</button>
+                                <button type="button" class="cr-preset-btn" onclick="setPreset('crTestDuration', 60)">60с</button>
+                            </div>
                         </div>
                     </div>
 
@@ -1380,22 +1493,35 @@
                                 <option value="center51">5.1 → Центр (из центрального канала)</option>
                             </select>
                         </div>
+                        
+                        <!-- ОБНОВЛЕННЫЙ ПОЛЗУНОК: ШАГ 1 ДЛЯ ПЛАВНОСТИ + ДВОЙНОЙ КЛИК -->
                         <div class="cr-form-group">
-                            <label title="Сдвиг аудио для синхронизации с видео/оригиналом">Синхронизация (мс):</label>
-                            <input type="number" id="crSyncValue" value="0" min="-250" max="250" step="0.5">
-                            <div class="cr-file-info">- раньше (отрезка) / + позже (задержка)</div>
+                            <label title="Сдвиг аудио для синхронизации. Двойной клик сбросит в 0">Синхронизация (мс):</label>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-top: 5px;">
+                                <input type="range" id="crSyncRange" class="cr-range-slider" min="-250" max="250" step="1" value="0" title="Двойной клик сбросит в 0">
+                                <input type="number" id="crSyncValue" value="0" min="-250" max="250" step="0.5" style="width: 85px; text-align: center; font-weight: bold; color: var(--accent-cyan, #00f2fe);">
+                            </div>
+                            <div class="cr-file-info" style="margin-top: 8px;">- раньше (отрезка) / + позже (задержка)</div>
                         </div>
                     </div>
 
-                    <!-- Дорожки -->
+                    <!-- Дорожки с Кнопками счетчиков -->
                     <div class="cr-flex-row">
                         <div class="cr-form-group">
-                            <label title="Дорожка, из которой берется звук (стерео или 5.1)">№ Исходной дорожки:</label>
-                            <input type="number" id="crSourceTrack" value="0" min="0">
+                            <label title="Дорожка, из которой берется звук">№ Исходной дорожки:</label>
+                            <div class="cr-counter-container">
+                                <button type="button" class="cr-counter-btn" onclick="adjustValue('crSourceTrack', -1)">-</button>
+                                <input type="number" id="crSourceTrack" value="0" min="0" style="text-align: center;">
+                                <button type="button" class="cr-counter-btn" onclick="adjustValue('crSourceTrack', 1)">+</button>
+                            </div>
                         </div>
                         <div class="cr-form-group">
-                            <label title="Целевая 5.1 дорожка, в которой заменяем центр">№ Целевой 5.1 дорожки:</label>
-                            <input type="number" id="crMultiTrack" value="1" min="0">
+                            <label title="Целевая дорожка 5.1">№ Целевой 5.1 дорожки:</label>
+                            <div class="cr-counter-container">
+                                <button type="button" class="cr-counter-btn" onclick="adjustValue('crMultiTrack', -1)">-</button>
+                                <input type="number" id="crMultiTrack" value="1" min="0" style="text-align: center;">
+                                <button type="button" class="cr-counter-btn" onclick="adjustValue('crMultiTrack', 1)">+</button>
+                            </div>
                         </div>
                     </div>
 
@@ -1421,7 +1547,11 @@
                     <label style="color: #50fa7b; margin-top: 1.5rem; display: block;">Готовая команда для консоли:</label>
                     <div class="cr-output-box" id="crOutput"></div>
 
-                    <button class="cr-copy-btn" id="crCopyBtn">📋 Скопировать команду</button>
+                    <!-- ОБНОВЛЕННЫЕ КНОПКИ ВНИЗУ (СКОПИРОВАТЬ + СБРОСИТЬ) -->
+                    <div style="display: flex; gap: 15px; margin-top: 1.5rem; width: 100%;">
+                        <button class="cr-copy-btn" id="crCopyBtn" style="flex: 2.5;">📋 Скопировать команду</button>
+                        <button class="cr-reset-btn" id="crResetBtn" title="Сбросить все настройки на значения по умолчанию">🔄 Сбросить</button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -3076,9 +3206,43 @@ const CONFIG = {
             }
         });
 
+
+        // =================== Вспомогательные глобальные функции для UI ===================
+        window.adjustValue = function(id, val) {
+            const input = document.getElementById(id);
+            if (!input) return;
+            let current = parseInt(input.value) || 0;
+            current = Math.max(0, current + val);
+            input.value = current;
+            input.dispatchEvent(new Event('input')); 
+        };
+
+        window.setPreset = function(id, val) {
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.value = val;
+            input.dispatchEvent(new Event('input'));
+        };
+
+        window.shiftTime = function(seconds) {
+            const input = document.getElementById('crTestStart');
+            if (!input) return;
+            let parts = input.value.split(':').map(Number);
+            if (parts.length !== 3) parts = [0, 10, 0]; 
+            
+            let totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+            totalSeconds = Math.max(0, totalSeconds + seconds);
+
+            const newH = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const newM = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            const newS = String(totalSeconds % 60).padStart(2, '0');
+
+            input.value = `${newH}:${newM}:${newS}`;
+            input.dispatchEvent(new Event('input'));
+        };
+
         // =================== ФУНКЦИОНАЛЬНОСТЬ: 5.1 CENTER REPLACER ===================
         (function() {
-            // Элементы
             const dropZone = document.getElementById('crDropZone');
             const fileInput = document.getElementById('crFileInput');
             const dropText = document.getElementById('crDropText');
@@ -3088,10 +3252,13 @@ const CONFIG = {
             const multiTrack = document.getElementById('crMultiTrack');
             const bitrateSelect = document.getElementById('crBitrate');
             const replaceMode = document.getElementById('crReplaceMode');
-            const syncInput = document.getElementById('crSyncValue');
-            const invertPhase = document.getElementById('crInvertPhase'); // Новый чекбокс
+            const invertPhase = document.getElementById('crInvertPhase');
             
-            // Новые элементы для тестового фрагмента
+            // Элементы синхронизации
+            const syncRange = document.getElementById('crSyncRange');
+            const syncValueInput = document.getElementById('crSyncValue');
+            
+            // Тестовый режим
             const testMode = document.getElementById('crTestMode');
             const testConfig = document.getElementById('crTestConfig');
             const testStart = document.getElementById('crTestStart');
@@ -3099,27 +3266,72 @@ const CONFIG = {
 
             const outputBox = document.getElementById('crOutput');
             const copyBtn = document.getElementById('crCopyBtn');
+            const resetBtn = document.getElementById('crResetBtn'); // Новая кнопка
             
             let currentInputFile = "фильм.mkv";
             let currentOutputFile = "фильм.ac3";
             
-            // Показать/Скрыть блок настроек теста
+            // Синхронизация слайдера и инпута
+            syncRange.addEventListener('input', (e) => {
+                syncValueInput.value = e.target.value;
+                generateCommand();
+            });
+            
+            syncValueInput.addEventListener('input', (e) => {
+                syncRange.value = e.target.value;
+                generateCommand();
+            });
+
+            // Новое: Двойной клик сбрасывает ползунок в 0
+            syncRange.addEventListener('dblclick', () => {
+                syncRange.value = 0;
+                syncValueInput.value = 0;
+                generateCommand();
+            });
+
             testMode.addEventListener('change', () => {
                 testConfig.style.display = testMode.checked ? 'flex' : 'none';
                 generateCommand();
             });
+            
+            // Новое: Логика кнопки сброса "crResetBtn"
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    // Возвращаем все переменные к исходным значениям
+                    sourceTrack.value = 0;
+                    multiTrack.value = 1;
+                    bitrateSelect.value = "640k";
+                    replaceMode.value = "stereo";
+                    
+                    syncRange.value = 0;
+                    syncValueInput.value = 0;
+                    
+                    invertPhase.checked = false;
+                    testMode.checked = false;
+                    testConfig.style.display = 'none';
+                    testStart.value = "00:10:00";
+                    testDuration.value = 30;
+                    
+                    // Если файл был перетащен, сбрасываем имя до дефолта
+                    currentInputFile = "фильм.mkv";
+                    currentOutputFile = "фильм.ac3";
+                    fileInfo.innerText = "Файл по умолчанию: фильм.mkv";
+                    dropText.innerText = "📂 Перетащите фильм сюда или кликните";
+                    
+                    generateCommand();
+                });
+            }
             
             function generateCommand() {
                 const srcIdx = sourceTrack.value || "0";
                 const dstIdx = multiTrack.value || "1";
                 const bitrate = bitrateSelect.value;
                 const mode = replaceMode.value; 
-                const syncValue = parseFloat(syncInput.value) || 0;
+                const syncValue = parseFloat(syncValueInput.value) || 0;
                 const isInverted = invertPhase.checked;
                 
                 let syncFilter = "";
 
-                // Логика задержки или ускорения ТОЛЬКО для Центра
                 if (syncValue > 0) {
                     syncFilter = `,adelay=${syncValue}`;
                 } else if (syncValue < 0) {
@@ -3127,126 +3339,101 @@ const CONFIG = {
                     syncFilter = `,atrim=start=${sec},asetpts=PTS-STARTPTS`;
                 }
                 
-                // Построение filter_complex (Вторая часть - разбор 5.1)
                 const destinationGraph = `[0:a:${dstIdx}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];` +
-            `[fc_old]anullsink;` +
-        `[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]`;
-        
-                // Первая часть - формирование нового центра (с учетом инверсии фазы)
-        let panFilter = "";
-        if (mode === "stereo") {
-                    // Если инверсия включена, умножаем на -0.5, иначе на 0.5
-            const formula = isInverted ? "c0=-0.5*c0-0.5*c1" : "c0=0.5*c0+0.5*c1";
-            panFilter = `pan=mono|${formula}`;
-        } else {
-                    // Если инверсия включена, умножаем канал FC на -1, иначе просто берем FC
-            const formula = isInverted ? "c0=-1*FC" : "c0=FC";
-            panFilter = `pan=mono|${formula}`;
-        }
-        
-        const filterComplex = `[0:a:${srcIdx}]${panFilter},aresample=48000${syncFilter}[new_center];` + destinationGraph;
-        
-                // Логика вырезки тестового фрагмента
-        let timeFlags = "";
-        let finalOutputFile = currentOutputFile;
-        let codecSettings = `-c:a ac3 -b:a ${bitrate}`; 
-        
-        if (testMode.checked) {
-            const start = testStart.value || "00:10:00";
-            const duration = testDuration.value || "30";
-            timeFlags = `-ss ${start} -t ${duration} `; 
-            
-            const lastDotIndex = currentInputFile.lastIndexOf('.');
-            const baseName = lastDotIndex === -1 ? currentInputFile : currentInputFile.substring(0, lastDotIndex);
-            finalOutputFile = baseName + '_test.wav';
-            
-            codecSettings = `-c:a pcm_s16le`; 
-        }
-        
-        const cmd = `ffmpeg ${timeFlags}-i "${currentInputFile}" -vn -sn -filter_complex "${filterComplex}" -map "[aout]" ${codecSettings} "${finalOutputFile}"`;
-        outputBox.innerText = cmd;
-    }
-    
-    function handleFile(file) {
-        if (!file) return;
-        currentInputFile = file.name;
-        const lastDotIndex = currentInputFile.lastIndexOf('.');
-        if (lastDotIndex === -1) {
-            currentOutputFile = currentInputFile + ".ac3";
-        } else {
-            currentOutputFile = currentInputFile.substring(0, lastDotIndex) + ".ac3";
-        }
-        fileInfo.innerText = `Выбран: ${currentInputFile}\nНа выходе будет: ${currentOutputFile}`;
-        dropText.innerText = "✅ Файл успешно выбран";
-        generateCommand();
-    }
-    
-            // События Drag & Drop
-    if (dropZone) {
-        dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length > 0) {
-                handleFile(e.dataTransfer.files[0]);
-            }
-        });
-    }
-    
-    if (fileInput) {
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) handleFile(e.target.files[0]);
-        });
-    }
-    
-            // Обновляем команду при любом изменении инпутов (добавлен invertPhase)
-    [sourceTrack, multiTrack, bitrateSelect, replaceMode, syncInput, testStart, testDuration, invertPhase].forEach(el => {
-        if (el) el.addEventListener('input', generateCommand);
-    });
-    
-    if (copyBtn) {
-        copyBtn.addEventListener('click', () => {
-            const text = outputBox.innerText;
-            navigator.clipboard.writeText(text).then(() => {
-                const original = copyBtn.innerText;
-                copyBtn.innerText = "✅ Скопировано!";
-                copyBtn.style.background = "#50fa7b";
-                setTimeout(() => {
-                    copyBtn.innerText = original;
-                    copyBtn.style.background = "linear-gradient(45deg, #bd93f9, #50fa7b)";
-                }, 2000);
-            });
-        });
-    }
-    
-    generateCommand();
-})();     
-
-        // =================== ИНИЦИАЛИЗАЦИЯ ПРИ ЗАГРУЗКЕ ===================
-document.addEventListener('DOMContentLoaded', function() {
-    const activeTab = document.querySelector('.tab-btn.active');
-    if(activeTab) activeTab.click();
-    
-    if (window.innerWidth <= 768) {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const navTabs = document.getElementById('navTabs');
-                if(navTabs) {
-                    setTimeout(() => {
-                        navTabs.classList.remove('active');
-                    }, 300);
+                                         `[fc_old]anullsink;` +
+                                         `[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]`;
+                
+                let panFilter = "";
+                if (mode === "stereo") {
+                    const formula = isInverted ? "c0=-0.5*c0-0.5*c1" : "c0=0.5*c0+0.5*c1";
+                    panFilter = `pan=mono|${formula}`;
+                } else {
+                    const formula = isInverted ? "c0=-1*FC" : "c0=FC";
+                    panFilter = `pan=mono|${formula}`;
                 }
+                
+                const filterComplex = `[0:a:${srcIdx}]${panFilter},aresample=48000${syncFilter}[new_center];` + destinationGraph;
+                
+                let timeFlags = "";
+                let finalOutputFile = currentOutputFile;
+                let codecSettings = `-c:a ac3 -b:a ${bitrate}`; 
+                
+                if (testMode.checked) {
+                    const start = testStart.value || "00:10:00";
+                    const duration = testDuration.value || "30";
+                    timeFlags = `-ss ${start} -t ${duration} `; 
+                    
+                    const lastDotIndex = currentInputFile.lastIndexOf('.');
+                    const baseName = lastDotIndex === -1 ? currentInputFile : currentInputFile.substring(0, lastDotIndex);
+                    finalOutputFile = baseName + '_test.wav';
+                    
+                    codecSettings = `-c:a pcm_s16le`; 
+                }
+                
+                const cmd = `ffmpeg ${timeFlags}-i "${currentInputFile}" -vn -sn -filter_complex "${filterComplex}" -map "[aout]" ${codecSettings} "${finalOutputFile}"`;
+                outputBox.innerText = cmd;
+            }
+            
+            function handleFile(file) {
+                if (!file) return;
+                currentInputFile = file.name;
+                const lastDotIndex = currentInputFile.lastIndexOf('.');
+                if (lastDotIndex === -1) {
+                    currentOutputFile = currentInputFile + ".ac3";
+                } else {
+                    currentOutputFile = currentInputFile.substring(0, lastDotIndex) + ".ac3";
+                }
+                fileInfo.innerText = `Выбран: ${currentInputFile}\nНа выходе будет: ${currentOutputFile}`;
+                dropText.innerText = "✅ Файл успешно выбран";
+                generateCommand();
+            }
+            
+            if (dropZone) {
+                dropZone.addEventListener('click', () => fileInput.click());
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.add('dragover');
+                });
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.classList.remove('dragover');
+                });
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) {
+                        handleFile(e.dataTransfer.files[0]);
+                    }
+                });
+            }
+            
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) handleFile(e.target.files[0]);
+                });
+            }
+            
+            // Слушатели изменений
+            [sourceTrack, multiTrack, bitrateSelect, replaceMode, syncValueInput, testStart, testDuration, invertPhase].forEach(el => {
+                if (el) el.addEventListener('input', generateCommand);
             });
-        });
-    }
-});
-</script>
+            
+            if (copyBtn) {
+                copyBtn.addEventListener('click', () => {
+                    const text = outputBox.innerText;
+                    navigator.clipboard.writeText(text).then(() => {
+                        const original = copyBtn.innerText;
+                        copyBtn.innerText = "✅ Скопировано!";
+                        copyBtn.style.background = "#50fa7b";
+                        setTimeout(() => {
+                            copyBtn.innerText = original;
+                            copyBtn.style.background = "linear-gradient(45deg, #bd93f9, #50fa7b)";
+                        }, 2000);
+                    });
+                });
+            }
+            
+            generateCommand();
+        })();     
+        </script>
 </body>
 </html>
