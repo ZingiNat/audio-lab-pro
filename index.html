@@ -1440,7 +1440,7 @@
             </div>
         </section>
 
-        <!-- === НОВАЯ ВКЛАДКА: 5.1 CENTER REPLACER === -->
+<!-- === НОВАЯ ВКЛАДКА: 5.1 CENTER REPLACER === -->
         <section id="centerReplacer" class="tab-section">
             <div class="section">
                 <h2>5.1 Center Replacer</h2>
@@ -1469,6 +1469,10 @@
                             <div class="cr-preset-container">
                                 <button type="button" class="cr-preset-btn" onclick="shiftTime(-600)">-10м</button>
                                 <button type="button" class="cr-preset-btn" onclick="shiftTime(-60)">-1м</button>
+                                <button type="button" class="cr-preset-btn" onclick="shiftTime(-10)">-10сек</button>
+                                <button type="button" class="cr-preset-btn" onclick="shiftTime(-1)">-1сек</button>
+                                <button type="button" class="cr-preset-btn" onclick="shiftTime(1)">+1сек</button>
+                                <button type="button" class="cr-preset-btn" onclick="shiftTime(10)">+10сек</button>
                                 <button type="button" class="cr-preset-btn" onclick="shiftTime(60)">+1м</button>
                                 <button type="button" class="cr-preset-btn" onclick="shiftTime(600)">+10м</button>
                             </div>
@@ -1484,7 +1488,7 @@
                         </div>
                     </div>
 
-                    <!-- Режим и Синхронизация -->
+                    <!-- Режим и Сверхточная Синхронизация -->
                     <div class="cr-flex-row">
                         <div class="cr-form-group">
                             <label>Режим замены:</label>
@@ -1494,12 +1498,16 @@
                             </select>
                         </div>
                         
-                        <!-- ОБНОВЛЕННЫЙ ПОЛЗУНОК: ШАГ 1 ДЛЯ ПЛАВНОСТИ + ДВОЙНОЙ КЛИК -->
+                        <!-- ОБНОВЛЕННЫЙ БЛОК СИНХРОНИЗАЦИИ: ДОБАВЛЕН ВЫБОР ЕДИНИЦ (мс / семплы) -->
                         <div class="cr-form-group">
-                            <label title="Сдвиг аудио для синхронизации. Двойной клик сбросит в 0">Синхронизация (мс):</label>
+                            <label title="Сдвиг аудио для синхронизации. Двойной клик сбросит в 0">Синхронизация (Samples/мс):</label>
                             <div style="display: flex; align-items: center; gap: 12px; margin-top: 5px;">
-                                <input type="range" id="crSyncRange" class="cr-range-slider" min="-250" max="250" step="1" value="0" title="Двойной клик сбросит в 0">
+                                <input type="range" id="crSyncRange" class="cr-range-slider" min="-250" max="250" step="1" value="0" title="Двойной клик сбросит в 0" style="flex: 1;">
                                 <input type="number" id="crSyncValue" value="0" min="-250" max="250" step="0.5" style="width: 85px; text-align: center; font-weight: bold; color: var(--accent-cyan, #00f2fe);">
+                                <select id="crSyncUnit" style="width: 90px; background: var(--bg-dark, #1e1e2f); border: 1px solid rgba(0,242,254,0.3); color: white; border-radius: 8px; padding: 0.6rem 0.3rem; font-family: monospace; font-size: 0.85rem;">
+                                    <option value="ms" selected>мс</option>
+                                    <option value="samples">семплы</option>
+                                </select>
                             </div>
                             <div class="cr-file-info" style="margin-top: 8px;">- раньше (отрезка) / + позже (задержка)</div>
                         </div>
@@ -1530,9 +1538,10 @@
                         <div class="cr-form-group" style="margin-bottom: 0;">
                             <label for="crBitrate">Качество звука на выходе:</label>
                             <select id="crBitrate">
+                                <option value="768k">768 kbps (Стандарт для стриминга)</option>
                                 <option value="640k" selected>640 kbps (Максимальное, Blu-ray)</option>
                                 <option value="384k">384 kbps (Стандартное DVD)</option>
-                                <option value="448k">448 kbps (Золотая середина)</option>
+                                <option value="448k">448 kbps (Золотая середина)</option>                            
                             </select>
                         </div>
                         
@@ -3241,7 +3250,7 @@ const CONFIG = {
             input.dispatchEvent(new Event('input'));
         };
 
-        // =================== ФУНКЦИОНАЛЬНОСТЬ: 5.1 CENTER REPLACER ===================
+// =================== ФУНКЦИОНАЛЬНОСТЬ: 5.1 CENTER REPLACER ===================
         (function() {
             const dropZone = document.getElementById('crDropZone');
             const fileInput = document.getElementById('crFileInput');
@@ -3257,6 +3266,7 @@ const CONFIG = {
             // Элементы синхронизации
             const syncRange = document.getElementById('crSyncRange');
             const syncValueInput = document.getElementById('crSyncValue');
+            const syncUnitSelect = document.getElementById('crSyncUnit'); // Добавлен селект
             
             // Тестовый режим
             const testMode = document.getElementById('crTestMode');
@@ -3266,7 +3276,7 @@ const CONFIG = {
 
             const outputBox = document.getElementById('crOutput');
             const copyBtn = document.getElementById('crCopyBtn');
-            const resetBtn = document.getElementById('crResetBtn'); // Новая кнопка
+            const resetBtn = document.getElementById('crResetBtn'); 
             
             let currentInputFile = "фильм.mkv";
             let currentOutputFile = "фильм.ac3";
@@ -3282,10 +3292,43 @@ const CONFIG = {
                 generateCommand();
             });
 
-            // Новое: Двойной клик сбрасывает ползунок в 0
+            // Двойной клик сбрасывает ползунок в 0
             syncRange.addEventListener('dblclick', () => {
                 syncRange.value = 0;
                 syncValueInput.value = 0;
+                generateCommand();
+            });
+
+            // УМНАЯ АВТОКОНВЕРТАЦИЯ (мс <-> семплы) при смене единиц
+            syncUnitSelect.addEventListener('change', () => {
+                const val = parseFloat(syncValueInput.value) || 0;
+                if (syncUnitSelect.value === "samples") {
+                    // Переключаем лимиты ползунка и инпута на семплы (до 12000 семплов = 250мс)
+                    syncRange.min = -12000;
+                    syncRange.max = 12000;
+                    syncRange.step = 1;
+                    syncValueInput.min = -12000;
+                    syncValueInput.max = 12000;
+                    syncValueInput.step = 1;
+
+                    // Конвертируем текущие мс в семплы (1 мс = 48 семплов)
+                    const newVal = Math.round(val * 48);
+                    syncValueInput.value = newVal;
+                    syncRange.value = newVal;
+                } else {
+                    // Переключаем лимиты ползунка и инпута обратно на мс
+                    syncRange.min = -250;
+                    syncRange.max = 250;
+                    syncRange.step = 1;
+                    syncValueInput.min = -250;
+                    syncValueInput.max = 250;
+                    syncValueInput.step = 0.5;
+
+                    // Конвертируем текущие семплы в мс
+                    const newVal = (val / 48).toFixed(1);
+                    syncValueInput.value = newVal;
+                    syncRange.value = Math.round(newVal);
+                }
                 generateCommand();
             });
 
@@ -3294,15 +3337,23 @@ const CONFIG = {
                 generateCommand();
             });
             
-            // Новое: Логика кнопки сброса "crResetBtn"
+            // Логика кнопки сброса "crResetBtn"
             if (resetBtn) {
                 resetBtn.addEventListener('click', () => {
-                    // Возвращаем все переменные к исходным значениям
                     sourceTrack.value = 0;
                     multiTrack.value = 1;
                     bitrateSelect.value = "640k";
                     replaceMode.value = "stereo";
                     
+                    // Сброс единиц и лимитов синхронизации
+                    syncUnitSelect.value = "ms";
+                    syncRange.min = -250;
+                    syncRange.max = 250;
+                    syncRange.step = 1;
+                    syncValueInput.min = -250;
+                    syncValueInput.max = 250;
+                    syncValueInput.step = 0.5;
+
                     syncRange.value = 0;
                     syncValueInput.value = 0;
                     
@@ -3312,7 +3363,6 @@ const CONFIG = {
                     testStart.value = "00:10:00";
                     testDuration.value = 30;
                     
-                    // Если файл был перетащен, сбрасываем имя до дефолта
                     currentInputFile = "фильм.mkv";
                     currentOutputFile = "фильм.ac3";
                     fileInfo.innerText = "Файл по умолчанию: фильм.mkv";
@@ -3328,15 +3378,24 @@ const CONFIG = {
                 const bitrate = bitrateSelect.value;
                 const mode = replaceMode.value; 
                 const syncValue = parseFloat(syncValueInput.value) || 0;
+                const syncUnit = syncUnitSelect.value; // Получаем выбранную единицу
                 const isInverted = invertPhase.checked;
                 
+                // ВЫЧИСЛЕНИЕ КОНЕЧНЫХ СЕМПЛОВ ДЛЯ FFmpeg
+                let totalSamples = 0;
+                if (syncUnit === "ms") {
+                    totalSamples = Math.round(Math.abs(syncValue) * (48000 / 1000));
+                } else {
+                    totalSamples = Math.round(Math.abs(syncValue));
+                }
+
                 let syncFilter = "";
 
+                // Сверхточная задержка или обрезка на уровне СЕМПЛОВ
                 if (syncValue > 0) {
-                    syncFilter = `,adelay=${syncValue}`;
+                    syncFilter = `,adelay=${totalSamples}S`;
                 } else if (syncValue < 0) {
-                    const sec = (Math.abs(syncValue) / 1000).toFixed(3);
-                    syncFilter = `,atrim=start=${sec},asetpts=PTS-STARTPTS`;
+                    syncFilter = `,atrim=start_sample=${totalSamples},asetpts=PTS-STARTPTS`;
                 }
                 
                 const destinationGraph = `[0:a:${dstIdx}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];` +
@@ -3413,7 +3472,7 @@ const CONFIG = {
             }
             
             // Слушатели изменений
-            [sourceTrack, multiTrack, bitrateSelect, replaceMode, syncValueInput, testStart, testDuration, invertPhase].forEach(el => {
+            [sourceTrack, multiTrack, bitrateSelect, replaceMode, syncValueInput, syncRange, syncUnitSelect, testStart, testDuration, invertPhase].forEach(el => {
                 if (el) el.addEventListener('input', generateCommand);
             });
             
@@ -3433,7 +3492,7 @@ const CONFIG = {
             }
             
             generateCommand();
-        })();     
+        })();    
         </script>
 </body>
 </html>
