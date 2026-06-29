@@ -1439,8 +1439,8 @@
 <!-- === ВКЛАДКА: 5.1 CENTER REPLACER === -->
 <section id="centerReplacer" class="tab-section">
     <div class="section">
-        <h2>5.1 Center Replacer</h2>
-        <p>Генератор команды FFmpeg для замены центрального канала в 5.1 аудиопотоке с возможностью точной синхронизации.</p>
+        <h2>5.1 & 7.1 Center Replacer</h2>
+        <p>Генератор команды FFmpeg для замены центрального канала в 5.1 и 7.1 аудиопотоках с возможностью точной синхронизации и фазовой коррекции.</p>
         <div class="cr-container">
             <div class="cr-drop-zone" id="crDropZone">
                 <div class="cr-drop-zone-text" id="crDropText">📂 Перетащите фильм сюда или кликните</div>
@@ -1490,7 +1490,7 @@
                     <label>Режим замены:</label>
                     <select id="crReplaceMode">
                         <option value="stereo">Стерео → Центр (моно-сумма)</option>
-                        <option value="center51">5.1 → Центр (из центрального канала)</option>
+                        <option value="center51">Многоканал → Центр (из центрального канала)</option>
                     </select>
                 </div>
                 
@@ -1545,14 +1545,19 @@
                 </div>
             </div>
 
-            <!-- Битрейт (AC3, AAC, DTS) и Инверсия -->
-            <div class="cr-flex-row" style="align-items: center;">
+            <!-- Выбор профессионального битрейта и фазово-пространственная коррекция -->
+            <div class="cr-flex-row" style="align-items: stretch;">
                 <div class="cr-form-group" style="margin-bottom: 0;">
                     <label for="crBitrate">Качество звука на выходе:</label>
-                    <select id="crBitrate">
-                        <optgroup label="AC3 (Dolby Digital)">
-                            <!-- Вариант 768k удален из-за несовместимости со стандартом AC-3 в FFmpeg -->
-                            <option value="ac3_640k" data-ext="ac3" data-codec="ac3" data-br="640k" selected>AC3 - 640 kbps (Blu-ray макс)</option>
+                    <select id="crBitrate" style="height: 45px;">
+                        <optgroup label="E-AC3 (Dolby Digital Plus - .eac3)">
+                            <option value="eac3_3072k" data-ext="eac3" data-codec="eac3" data-br="3072k">E-AC3 - 3072 kbps (Студийный Мастер)</option>
+                            <option value="eac3_1536k" data-ext="eac3" data-codec="eac3" data-br="1536k">E-AC3 - 1536 kbps (UHD Blu-ray)</option>
+                            <option value="eac3_1024k" data-ext="eac3" data-codec="eac3" data-br="1024k">E-AC3 - 1024 kbps (Детализированный DD+)</option>
+                            <option value="eac3_768k" data-ext="eac3" data-codec="eac3" data-br="768k">E-AC3 - 768 kbps (Премиум Стриминг)</option>
+                        </optgroup>
+                        <optgroup label="AC3 (Dolby Digital - .ac3)">
+                            <option value="ac3_640k" data-ext="ac3" data-codec="ac3" data-br="640k" selected>AC3 - 640 kbps (Standard Max Blu-ray)</option>
                             <option value="ac3_448k" data-ext="ac3" data-codec="ac3" data-br="448k">AC3 - 448 kbps (Золотая середина)</option>
                             <option value="ac3_384k" data-ext="ac3" data-codec="ac3" data-br="384k">AC3 - 384 kbps (DVD стандарт)</option>
                         </optgroup>
@@ -1568,10 +1573,14 @@
                     </select>
                 </div>
                 
-                <div class="cr-form-group" style="margin-bottom: 0; background: transparent; border: 1px dashed rgba(0,242,254,0.3); padding: 1.1rem 1rem;">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #8be9fd; margin: 0; font-size: 0.85rem;">
+                <div class="cr-form-group" style="margin-bottom: 0; background: transparent; border: 1px dashed rgba(0,242,254,0.3); padding: 0.9rem 1rem; display: flex; flex-direction: column; gap: 10px; justify-content: center;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #8be9fd; margin: 0; font-size: 0.85rem; user-select: none;">
                         <input type="checkbox" id="crInvertPhase" style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
                         <span title="Умножение аудиосигнала на -1. Помогает избежать частотных конфликтов (эффекта трубы)">Инвертировать фазу центрального канала</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #8be9fd; margin: 0; font-size: 0.85rem; user-select: none;">
+                        <input type="checkbox" id="crUse71" style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
+                        <span title="Включает профессиональный режим работы с 8-канальной раскладкой 7.1 (FL+FR+FC+LFE+BL+BR+SL+SR)">Активировать режим 7.1 (вместо 5.1)</span>
                     </label>
                 </div>
             </div>
@@ -3272,7 +3281,7 @@ const CONFIG = {
             input.dispatchEvent(new Event('input'));
         };
 
-// =================== ФУНКЦИОНАЛЬНОСТЬ: 5.1 CENTER REPLACER ===================
+// =================== ФУНКЦИОНАЛЬНОСТЬ: 5.1 & 7.1 CENTER REPLACER ===================
 (function() {
     const dropZone = document.getElementById('crDropZone');
     const fileInput = document.getElementById('crFileInput');
@@ -3284,6 +3293,7 @@ const CONFIG = {
     const bitrateSelect = document.getElementById('crBitrate');
     const replaceMode = document.getElementById('crReplaceMode');
     const invertPhase = document.getElementById('crInvertPhase');
+    const use71 = document.getElementById('crUse71');
     
     // Элементы синхронизации
     const syncRange = document.getElementById('crSyncRange');
@@ -3467,6 +3477,7 @@ const CONFIG = {
             updateLimiterIndicator();
             
             invertPhase.checked = false;
+            if (use71) use71.checked = false;
             testMode.checked = false;
             testConfig.style.display = 'none';
             testStart.value = "00:10:00";
@@ -3492,7 +3503,14 @@ const CONFIG = {
         const syncUnit = syncUnitSelect.value; 
         const volValue = parseFloat(volumeValueInput.value) || 0; 
         const isInverted = invertPhase.checked;
+        const is71 = use71 && use71.checked;
         
+        // Динамическое обновление подписей дорожек в интерфейсе
+        const targetLabel = document.querySelector('label[title="Порядковый номер целевой дорожки 5.1, начиная с 1"]');
+        if (targetLabel) {
+            targetLabel.innerHTML = is71 ? "№ Целевой 7.1 дорожки (в UI):" : "№ Целевой 5.1 дорожки (в UI):";
+        }
+
         // Получаем данные выбранного формата
         const selectedOption = bitrateSelect.options[bitrateSelect.selectedIndex];
         const codec = selectedOption.getAttribute('data-codec');
@@ -3511,13 +3529,13 @@ const CONFIG = {
             userSamples = Math.round(syncValue);
         }
 
-        // 2. Автокомпенсация задержки лимитера (ADC) настроена на 239 семплов вместо 240
+        // 2. Автокомпенсация задержки лимитера (ADC): вычитание 239 семплов вместо 240 по тестам замера рассинхрона
         const limiterLatency = (volValue > 0) ? 239 : 0;
         const compensatedSamples = userSamples - limiterLatency;
 
         let syncFilter = "";
 
-        // Погрешность в -1 семпл для обычной синхронизации убрана. Применяется только результирующий compensatedSamples.
+        // Погрешность в -1 семпл для обычной синхронизации отсутствует. Применяется прямое значение compensatedSamples.
         if (compensatedSamples > 0) {
             syncFilter = `,adelay=${compensatedSamples}S`;
         } else if (compensatedSamples < 0) {
@@ -3534,9 +3552,17 @@ const CONFIG = {
             }
         }
         
-        const destinationGraph = `[0:a:${dstIdx}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];` +
-                                 `[fc_old]anullsink;` +
-                                 `[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]`;
+        // Выбор графа в зависимости от выбранной конфигурации каналов (5.1 или 7.1)
+        let destinationGraph = "";
+        if (is71) {
+            destinationGraph = `[0:a:${dstIdx}]channelsplit=channel_layout=7.1[fl][fr][fc_old][lfe][bl][br][sl][sr];` +
+                               `[fc_old]anullsink;` +
+                               `[fl][fr][new_center][lfe][bl][br][sl][sr]join=inputs=8:channel_layout=7.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR|6.0-SL|7.0-SR[aout]`;
+        } else {
+            destinationGraph = `[0:a:${dstIdx}]channelsplit=channel_layout=5.1[fl][fr][fc_old][lfe][bl][br];` +
+                               `[fc_old]anullsink;` +
+                               `[fl][fr][new_center][lfe][bl][br]join=inputs=6:channel_layout=5.1:map=0.0-FL|1.0-FR|2.0-FC|3.0-LFE|4.0-BL|5.0-BR[aout]`;
+        }
         
         let panFilter = "";
         if (mode === "stereo") {
@@ -3605,7 +3631,7 @@ const CONFIG = {
     }
     
     // Подписка на изменение элементов управления (используются события input и change для кроссбраузерности)
-    [sourceTrack, multiTrack, bitrateSelect, replaceMode, syncValueInput, syncRange, syncUnitSelect, volumeRange, volumeValueInput, testStart, testDuration, invertPhase].forEach(el => {
+    [sourceTrack, multiTrack, bitrateSelect, replaceMode, syncValueInput, syncRange, syncUnitSelect, volumeRange, volumeValueInput, testStart, testDuration, invertPhase, use71].forEach(el => {
         if (el) {
             el.addEventListener('input', generateCommand);
             el.addEventListener('change', generateCommand);
