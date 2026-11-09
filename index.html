@@ -1194,6 +1194,7 @@
                                     <option value="4096">4096</option>
                                     <option value="8192">8192</option>
                                     <option value="16384">16384</option>
+                                    <option value="32768">32768</option>
                                 </select>
                             </div>
                             
@@ -1279,13 +1280,13 @@
                                 <option value="4096">4096</option>
                                 <option value="8192">8192</option>
                                 <option value="16384">16384</option>
+                                <option value="32768">32768</option>
                             </select>
                         </div>
 
                         <div class="buttons-container">
                             <button class="btn btn-noise" id="whiteNoise">Белый шум</button>
                             <button class="btn btn-noise" id="pinkNoise">Розовый шум</button>
-                            <button class="btn btn-noise" id="brownNoise">Коричневый шум</button>
                         </div>
                         
                         <button class="btn btn-stop" id="stopNoise">Остановить шум</button>
@@ -1300,7 +1301,7 @@
                         </div>
                         
                         <div class="info-box">
-                            <strong>Примечание:</strong> Белый шум имеет равномерную спектральную плотность. Розовый шум имеет спад 3 дБ/октаву. Коричневый шум имеет спад 6 дБ/октаву.
+                            <strong>Примечание:</strong> Белый шум имеет равномерную спектральную плотность. Розовый шум имеет спад 3 дБ/октаву.
                         </div>
                     </div>
                 </div>
@@ -2373,7 +2374,6 @@ let isDragging = false;
         const stopToneBtn = document.getElementById('stopTone');
         const whiteNoiseBtn = document.getElementById('whiteNoise');
         const pinkNoiseBtn = document.getElementById('pinkNoise');
-        const brownNoiseBtn = document.getElementById('brownNoise');
         const stopNoiseBtn = document.getElementById('stopNoise');
         
         // ===== ЛОГАРИФМИЧЕСКАЯ ЧАСТОТА (1 Гц .. 24 кГц) =====
@@ -2496,23 +2496,6 @@ let isDragging = false;
             return noiseBuffer;
         }
         
-        function createBrownNoise() {
-            const bufferSize = 2 * audioContext.sampleRate;
-            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            
-            let lastOut = 0.0;
-            
-            for (let i = 0; i < bufferSize; i++) {
-                const white = Math.random() * 2 - 1;
-                output[i] = (lastOut + (0.02 * white)) / 1.02;
-                lastOut = output[i];
-                output[i] *= 3.5;
-            }
-            
-            return noiseBuffer;
-        }
-        
         function playNoise(type) {
             initAudio();
             stopNoise();
@@ -2530,12 +2513,6 @@ let isDragging = false;
                 pinkNoiseBtn.classList.add('active');
                     // Для розового шума включаем коррекцию
                 if (pinkNoiseCorrection) pinkNoiseCorrection.checked = true;
-                break;
-            case 'brown':
-                noiseBuffer = createBrownNoise();
-                brownNoiseBtn.classList.add('active');
-                    // Для коричневого шума не включаем коррекцию
-                if (pinkNoiseCorrection) pinkNoiseCorrection.checked = false;
                 break;
             }
             
@@ -2560,7 +2537,6 @@ let isDragging = false;
             
             whiteNoiseBtn.classList.remove('active');
             pinkNoiseBtn.classList.remove('active');
-            brownNoiseBtn.classList.remove('active');
             currentNoiseType = null;
             
             // Сбрасываем коррекцию при остановке шума
@@ -2579,9 +2555,6 @@ let isDragging = false;
         }
         if (pinkNoiseBtn) {
             pinkNoiseBtn.addEventListener('click', () => playNoise('pink'));
-        }
-        if (brownNoiseBtn) {
-            brownNoiseBtn.addEventListener('click', () => playNoise('brown'));
         }
         if (stopNoiseBtn) {
             stopNoiseBtn.addEventListener('click', stopNoise);
