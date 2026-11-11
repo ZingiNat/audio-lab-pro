@@ -1113,63 +1113,310 @@
 </style>
 </head>
 <body>
-    <!-- КОМПАКТНАЯ ФИКСИРОВАННАЯ ШАПКА -->
+<!-- КОМПАКТНАЯ ФИКСИРОВАННАЯ ШАПКА -->
     <header class="header">
         <div class="header-left">
-            <button class="menu-toggle" id="menuToggle">☰</button>
+            <button class="menu-toggle" id="menuToggle" aria-label="Открыть меню">☰</button>
             <div class="logo">AUDIO LAB PRO</div>
         </div>
         
-        <nav class="tabs" id="navTabs">
-            <button class="tab-btn active" data-tab="home">Главная</button>
-            <button class="tab-btn" data-tab="generator">Генератор</button>
+        <nav class="tabs" id="navTabs" aria-label="Основная навигация">
+            <button class="tab-btn active" data-tab="home">Главная (Инструкция)</button>
+            <button class="tab-btn" data-tab="generator">Генератор / RTA</button>
             <button class="tab-btn" data-tab="crossover">Кроссовер</button>
-            <button class="tab-btn" data-tab="calculator">Калькулятор</button>
-            <button class="tab-btn" data-tab="centerReplacer">5.1 Center Replacer</button>
+            <button class="tab-btn" data-tab="calculator">Калькулятор SPL</button>
+            <button class="tab-btn" data-tab="centerReplacer">5.1/7.1 FFmpeg</button>
         </nav>
     </header>
 
     <!-- Основной контент -->
     <main class="main-content">
-        <!-- Главная страница -->
+        <!-- Главная страница (Инструкция) -->
         <section id="home" class="tab-section active">
-            <div class="section">
-                <h2>Добро пожаловать в AudioLab Pro</h2>
-                <p>AudioLab Pro — это комплекс профессиональных инструментов для работы со звуком. Здесь вы найдете всё необходимое для анализа, моделирования и генерации аудиосигналов.</p>
+            
+            <!-- Локальные стили для премиального отображения инструкции -->
+            <style>
+                .home-wrapper {
+                    max-width: 1300px;
+                    margin: 0 auto;
+                }
+                .home-header {
+                    text-align: center;
+                    margin-bottom: 3rem;
+                }
+                .home-header h2 {
+                    font-size: 2.5rem;
+                    border: none;
+                    margin-bottom: 1rem;
+                    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-fuchsia));
+                    -webkit-background-clip: text;
+                    background-clip: text;
+                    color: transparent;
+                }
+                .home-header p {
+                    font-size: 1.1rem;
+                    color: var(--text-light);
+                    max-width: 800px;
+                    margin: 0 auto;
+                }
+                .warning-banner {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 1rem;
+                    background: rgba(251, 191, 36, 0.1);
+                    border: 1px solid rgba(251, 191, 36, 0.3);
+                    color: #fbbf24;
+                    padding: 1rem 2rem;
+                    border-radius: 8px;
+                    margin: 2rem auto;
+                    max-width: 800px;
+                    text-align: center;
+                }
+                .module-section {
+                    margin-bottom: 4rem;
+                }
+                .module-title {
+                    text-align: center;
+                    font-family: 'Teko', sans-serif;
+                    font-size: 2.2rem;
+                    color: var(--text-white);
+                    margin-bottom: 0.5rem;
+                    letter-spacing: 1px;
+                }
+                .module-desc {
+                    text-align: center;
+                    color: var(--text-light);
+                    margin-bottom: 2rem;
+                    font-size: 1.1rem;
+                    opacity: 0.8;
+                }
+                .premium-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+                    gap: 2rem;
+                }
+                .premium-card {
+                    background: rgba(0, 0, 0, 0.2);
+                    border-radius: 12px;
+                    padding: 2rem;
+                    display: flex;
+                    flex-direction: column;
+                    border-top: 4px solid;
+                    transition: transform 0.3s ease, box-shadow 0.3s ease;
+                }
+                .premium-card:hover {
+                    transform: translateY(-5px);
+                    background: rgba(0, 0, 0, 0.3);
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+                }
+                .premium-card h4 {
+                    font-family: 'Teko', sans-serif;
+                    font-size: 1.8rem;
+                    text-align: center;
+                    margin-bottom: 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
+                }
+                /* Кастомные списки без сдвигов */
+                .premium-list {
+                    list-style: none;
+                    padding: 0;
+                    margin: 0;
+                    flex-grow: 1;
+                }
+                .premium-list li {
+                    position: relative;
+                    padding-left: 1.5rem;
+                    margin-bottom: 1rem;
+                    line-height: 1.6;
+                    font-size: 0.95rem;
+                    color: var(--text-light);
+                }
+                .premium-list li strong {
+                    color: var(--text-white);
+                }
+                .premium-list li::before {
+                    content: '•';
+                    position: absolute;
+                    left: 0;
+                    top: -2px;
+                    font-size: 1.5rem;
+                }
+                /* Цветовые модификаторы */
+                .card-cyan { border-top-color: var(--accent-cyan); }
+                .card-cyan h4 { color: var(--accent-cyan); }
+                .card-cyan .premium-list li::before { color: var(--accent-cyan); }
+
+                .card-lime { border-top-color: var(--accent-lime); }
+                .card-lime h4 { color: var(--accent-lime); }
+                .card-lime .premium-list li::before { color: var(--accent-lime); }
+
+                .card-fuchsia { border-top-color: var(--accent-fuchsia); }
+                .card-fuchsia h4 { color: var(--accent-fuchsia); }
+                .card-fuchsia .premium-list li::before { color: var(--accent-fuchsia); }
+
+                .card-blue { border-top-color: var(--accent-blue); }
+                .card-blue h4 { color: var(--accent-blue); }
+                .card-blue .premium-list li::before { color: var(--accent-blue); }
                 
-                <h3>Доступные инструменты</h3>
-                <div class="intro-grid">
-                    <div class="tool-card">
-                        <h4>ГЕНЕРАТОР ЧАСТОТ</h4>
-                        <p>Генерируйте чистые тона и различные типы шумов (белый, розовый, коричневый). Идеально для тестирования аудиооборудования, калибровки и аудиоэкспериментов.</p>
-                    </div>
+                .card-green { border-top-color: #50fa7b; }
+                .card-green h4 { color: #50fa7b; }
+                .card-green .premium-list li::before { color: #50fa7b; }
+
+                .card-purple { border-top-color: #bd93f9; }
+                .card-purple h4 { color: #bd93f9; }
+                .card-purple .premium-list li::before { color: #bd93f9; }
+
+                .card-orange { border-top-color: #ffb86c; }
+                .card-orange h4 { color: #ffb86c; }
+                .card-orange .premium-list li::before { color: #ffb86c; }
+
+                .card-red { border-top-color: #ff5555; }
+                .card-red h4 { color: #ff5555; }
+                .card-red .premium-list li::before { color: #ff5555; }
+            </style>
+
+            <div class="section">
+                <div class="home-wrapper">
                     
-                    <div class="tool-card">
-                        <h4>СИМУЛЯТОР КРОССОВЕРА</h4>
-                        <p>Моделируйте активные и пассивные кроссоверы. Анализируйте АЧХ, ФЧХ и импеданс. Поддерживает фильтры Линквица-Райли, Баттерворта и Бесселя.</p>
-                    </div>
-                    
-                    <div class="tool-card">
-                        <h4>КАЛЬКУЛЯТОР ЗВУКОВОГО ДАВЛЕНИЯ</h4>
-                        <p>Рассчитывайте уровень звукового давления (SPL) на основе мощности акустической системы, чувствительности и расстояния до слушателя.</p>
-                    </div>
-                    
-                    <div class="tool-card">
-                        <h4>ПРОФЕССИОНАЛЬНЫЙ АНАЛИЗ</h4>
-                        <p>Все инструменты используют точные алгоритмы и обеспечивают детальную визуализацию результатов в реальном времени.</p>
+                    <div class="home-header">
+                        <h2>РУКОВОДСТВО ПОЛЬЗОВАТЕЛЯ</h2>
+                        <p>Профессиональная аудиолаборатория в браузере. Все вычисления, генерация сигналов и построение графиков происходят локально. Ниже представлено подробное руководство по каждому модулю.</p>
+                        
+                        <div class="warning-banner">
+                            <span style="font-size: 1.5rem;">⚠️</span>
+                            <span><strong>Техника безопасности:</strong> Перед использованием генераторов тона или шума убедитесь, что громкость ваших мониторов или наушников установлена на минимум!</span>
+                        </div>
                     </div>
 
-                    <div class="tool-card">
-                        <h4>5.1 CENTER REPLACER</h4>
-                        <p>Генератор команды FFmpeg для замены центрального канала в 5.1 аудиопотоке на моно-сумму из стереодорожки. Идеально для ремастеринга многоканального звука.</p>
+                    <!-- МОДУЛЬ 1 -->
+                    <div class="module-section">
+                        <h3 class="module-title">1. ГЕНЕРАТОР И RTA (АНАЛИЗАТОР)</h3>
+                        <p class="module-desc">Настройка акустики помещений и тестирование АЧХ систем с измерительным микрофоном.</p>
+                        
+                        <div class="premium-grid">
+                            <div class="premium-card card-cyan">
+                                <h4>📈 RTA (Анализатор спектра)</h4>
+                                <ul class="premium-list">
+                                    <li><strong>FFT Размер:</strong> Влияет на детализацию. 2048-4096 оптимально для скорости, 16384+ для точного анализа НЧ.</li>
+                                    <li><strong>Сглаживание:</strong> От 1/1 до 1/24 октавы. Убирает "гребенку" для оценки общего тонального баланса.</li>
+                                    <li><strong>Навигация по графику:</strong> Выделите область мышью (drag) для увеличения. Используйте ползунки под и слева от графика для скроллинга. Двойной клик сбросит масштаб.</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="premium-card card-lime">
+                                <h4>🌊 Генераторы сигналов</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Тон-генератор:</strong> Логарифмический ползунок от 1 Гц до 24 кГц. Генерирует чистую синусоиду (Sine wave).</li>
+                                    <li><strong>Розовый шум (Pink Noise):</strong> Спектральная плотность падает на 3 дБ/окт.</li>
+                                    <li><strong>Авто-компенсация:</strong> При включении розового шума на RTA графике автоматически применяется компенсация, чтобы ровная АЧХ выглядела как прямая линия.</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <h3>Как использовать</h3>
-                <p>Выберите нужный инструмент в верхнем меню. Каждый инструмент имеет интуитивно понятный интерфейс с возможностью регулировки параметров в реальном времени и мгновенным отображением результатов.</p>
-                
-                <div class="info-box" style="margin-top: 2rem;">
-                    <strong>Технические особенности:</strong> Все расчеты выполняются непосредственно в браузере с использованием JavaScript. Графики строятся с помощью библиотеки Chart.js. Для генерации звука используется Web Audio API.
+
+                    <!-- МОДУЛЬ 2 -->
+                    <div class="module-section">
+                        <h3 class="module-title">2. СИМУЛЯТОР КРОССОВЕРА</h3>
+                        <p class="module-desc">Проектирование и анализ 2-полосных пассивных фильтров (Low-Pass и High-Pass).</p>
+                        
+                        <div class="premium-grid">
+                            <div class="premium-card card-fuchsia">
+                                <h4>⚙️ Проектирование</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Пресеты:</strong> Linkwitz-Riley (ровная АЧХ в сумме), Butterworth (макс. плоская полоса), Bessel (лучшая фаза).</li>
+                                    <li><strong>Привязка компонентов:</strong> При включенной галочке номиналы катушек (L) и конденсаторов (C) рассчитываются автоматически. Отключите для ручной подгонки деталей.</li>
+                                    <li><strong>L-Pad (Аттенюатор):</strong> Автоматический расчет резисторов для выравнивания чувствительности ВЧ-динамика.</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="premium-card card-blue">
+                                <h4>📊 Графики и анализ</h4>
+                                <ul class="premium-list">
+                                    <li><strong>АЧХ (SPL):</strong> Визуализация срезов НЧ, ВЧ и их суммы с учетом фазового взаимодействия.</li>
+                                    <li><strong>Фаза и Импеданс:</strong> Отображение фазового сдвига и общего сопротивления системы (важно для защиты усилителя).</li>
+                                    <li><strong>Инверсия ВЧ:</strong> Позволяет быстро проверить, требуется ли переполюсовка динамика на частоте раздела.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- МОДУЛЬ 3 -->
+                    <div class="module-section">
+                        <h3 class="module-title">3. КАЛЬКУЛЯТОР ЗВУКОВОГО ДАВЛЕНИЯ</h3>
+                        <p class="module-desc">Интерактивный расчет уровня звукового давления (SPL) в зависимости от мощности и расстояния.</p>
+                        
+                        <div class="premium-grid">
+                            <div class="premium-card card-cyan">
+                                <h4>🔊 Физика и расчет</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Мощность:</strong> Каждое удвоение подводимой мощности дает прибавку <strong>+3 дБ</strong> к итоговому звуковому давлению.</li>
+                                    <li><strong>Расстояние:</strong> В свободном поле каждое удвоение дистанции от источника дает спад громкости на <strong>-6 дБ</strong>.</li>
+                                    <li><strong>Чувствительность:</strong> Базовый параметр акустики (измеряется при 1Вт/1м). Задается по паспорту ваших колонок.</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="premium-card card-fuchsia">
+                                <h4>⚠️ Индикация и безопасность</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Цветовая шкала:</strong> Визуализирует уровень опасности. От зеленого (безопасно) до красного (критично).</li>
+                                    <li><strong>Порог слуха:</strong> Длительное воздействие звука громче 85-90 дБ начинает утомлять слух.</li>
+                                    <li><strong>Опасная зона:</strong> Звуковое давление свыше 100-110 дБ может привести к необратимым повреждениям слухового аппарата.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- МОДУЛЬ 4 (РАСШИРЕННЫЙ) -->
+                    <div class="module-section">
+                        <h3 class="module-title">4. 5.1 & 7.1 CENTER REPLACER</h3>
+                        <p class="module-desc">Генератор профессиональных команд FFmpeg для замены центрального канала. Идеально для дубляжа и ремастеринга.</p>
+                        
+                        <div class="premium-grid">
+                            <!-- Карта 1: Маршрутизация -->
+                            <div class="premium-card card-purple">
+                                <h4>🎛 Маршрутизация и Режимы</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Выбор дорожек (в UI):</strong> Укажите порядковый номер исходной (донора) и целевой (5.1/7.1) дорожек. Нумерация начинается с <strong>1</strong> (как в любом плеере), скрипт сам переведет её в формат FFmpeg.</li>
+                                    <li><strong>Режим "Стерео → Центр":</strong> Скрипт суммирует левый и правый каналы стереодорожки в моно и помещает ровно в центр вашей 5.1/7.1 системы.</li>
+                                    <li><strong>Режим "Многоканал → Центр":</strong> Берет чистый голос из центрального канала другой 5.1 дорожки.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 2: Синхронизация и Тест -->
+                            <div class="premium-card card-orange">
+                                <h4>⏱ Синхронизация и Тест</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Замер в Audacity:</strong> Для идеального lip-sync (попадания в губы) откройте оригинальную и новую дорожки в бесплатном редакторе <strong>Audacity</strong>. Измерьте точный сдвиг в миллисекундах или сэмплах и впишите в ползунок синхронизации.</li>
+                                    <li><strong>Тестовый фрагмент:</strong> Включите галочку тестирования. Укажите время начала (например, где есть диалог) и длительность (например, 30 сек). Это позволит быстро отрендерить короткий кусок и проверить синхронизацию без перекодирования всего фильма.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 3: Управление звуком -->
+                            <div class="premium-card card-red">
+                                <h4>🔊 Громкость и Обработка</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Громкость центра:</strong> Точная регулировка уровня голоса от -12 до +12 дБ.</li>
+                                    <li><strong>Умный Лимитер:</strong> Если вы усиливаете центр (> 0 дБ), автоматически включается защита от перегруза (alimiter). <em>Важно:</em> лимитер вносит техническую задержку. Скрипт <strong>автоматически компенсирует 239 сэмплов</strong> задержки, чтобы звук не "поплыл".</li>
+                                    <li><strong>Инверсия фазы:</strong> Умножает сигнал центра на -1. Спасает, если голоса из фронтов и нового центра вычитаются (звук "как из трубы").</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 4: Экспорт -->
+                            <div class="premium-card card-green">
+                                <h4>💾 Экспорт и Кодеки</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Качество звука:</strong> Огромный выбор кодеков. От стандарта DVD (AC3 - 384k) до студийного качества стримингов (E-AC3 - 1536k и выше).</li>
+                                    <li><strong>Сброс настроек (Reset):</strong> Одна кнопка моментально вернет громкость в 0, сбросит синхронизацию, вернет нумерацию дорожек и отключит тестовый режим.</li>
+                                    <li><strong>Командная строка:</strong> Нажмите "Скопировать команду" и просто вставьте её в терминал (CMD/PowerShell) там, где лежит ваш фильм.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </section>
@@ -1557,12 +1804,12 @@
                             <option value="eac3_1024k" data-ext="eac3" data-codec="eac3" data-br="1024k">E-AC3 - 1024 kbps (Детализированный DD+)</option>
                             <option value="eac3_768k" data-ext="eac3" data-codec="eac3" data-br="768k">E-AC3 - 768 kbps (Премиум Стриминг)</option>
                             <!-- НОВЫЕ ВАРИАНТЫ E-AC3 -->
-                            <option value="eac3_640k" data-ext="eac3" data-codec="eac3" data-br="640k">E-AC3 - 640 kbps (High Web-DL)</option>
+                            <option value="eac3_640k" data-ext="eac3" data-codec="eac3" data-br="640k" selected>E-AC3 - 640 kbps (High Web-DL)</option>
                             <option value="eac3_448k" data-ext="eac3" data-codec="eac3" data-br="448k">E-AC3 - 448 kbps (Стандартный Web-DL)</option>
                             <option value="eac3_384k" data-ext="eac3" data-codec="eac3" data-br="384k">E-AC3 - 384 kbps (Экономичный 5.1)</option>
                         </optgroup>
                         <optgroup label="AC3 (Dolby Digital - .ac3)">
-                            <option value="ac3_640k" data-ext="ac3" data-codec="ac3" data-br="640k" selected>AC3 - 640 kbps (Standard Max Blu-ray)</option>
+                            <option value="ac3_640k" data-ext="ac3" data-codec="ac3" data-br="640k">AC3 - 640 kbps (Standard Max Blu-ray)</option>
                             <option value="ac3_448k" data-ext="ac3" data-codec="ac3" data-br="448k">AC3 - 448 kbps (Золотая середина)</option>
                             <option value="ac3_384k" data-ext="ac3" data-codec="ac3" data-br="384k">AC3 - 384 kbps (DVD стандарт)</option>
                         </optgroup>
