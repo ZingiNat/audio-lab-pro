@@ -1437,11 +1437,11 @@
                                 <label for="rtaFftSize">FFT размер:</label>
                                 <select id="rtaFftSize" class="select-control">
                                     <option value="1024">1024</option>
-                                    <option value="2048" selected>2048</option>
+                                    <option value="2048">2048</option>
                                     <option value="4096">4096</option>
                                     <option value="8192">8192</option>
                                     <option value="16384">16384</option>
-                                    <option value="32768">32768</option>
+                                    <option value="32768" selected>32768</option>
                                 </select>
                             </div>
                             
@@ -1523,11 +1523,11 @@
                             <label for="noiseFftSize">FFT размер (для RTA):</label>
                             <select id="noiseFftSize" class="select-control">
                                 <option value="1024">1024</option>
-                                <option value="2048" selected>2048</option>
+                                <option value="2048">2048</option>
                                 <option value="4096">4096</option>
                                 <option value="8192">8192</option>
                                 <option value="16384">16384</option>
-                                <option value="32768">32768</option>
+                                <option value="32768" selected>32768</option>
                             </select>
                         </div>
 
@@ -1929,917 +1929,1166 @@
     let isPlaying = false;
     let currentNoiseType = null;
 
-// =================== RTA (MIC) / ANALYSER (ИСПРАВЛЕННЫЙ) ===================
+    // =================== RTA (MIC) / ANALYSER + PERIODIC PINK NOISE (PN, как в REW) ===================
     let rtaStream = null;
     let rtaSourceNode = null;
     let rtaAnalyser = null;
     let rtaAnimId = null;
     let rtaChart = null;
-    let rtaScaleType = 'logarithmic'; 
+    let rtaScaleType = 'logarithmic';
 
-        // Состояние зума теперь хранит пределы для обеих осей
-        let rtaZoomState = null; // { x: {min, max}, y: {min, max} }
-        let isRtaDrawing = false;
+    // Состояние зума хранит пределы для обеих осей
+    let rtaZoomState = null; // { x: {min, max}, y: {min, max} }
+    let isRtaDrawing = false;
 
-        const rtaStartBtn = document.getElementById('rtaStartMic');
-        const rtaStopBtn  = document.getElementById('rtaStopMic');
-        const rtaScaleToggleBtn = document.getElementById('rtaScaleToggle');
-        const rtaResetZoomBtn = document.getElementById('rtaResetZoom');
-        const rtaFftSizeSel = document.getElementById('rtaFftSize');
-        const rtaSmoothSel  = document.getElementById('rtaSmoothingOct');
-        const pinkNoiseCorrection = document.getElementById('pinkNoiseCorrection');
-        const rtaCanvas = document.getElementById('rtaChart');
-        const noiseFftSizeSel = document.getElementById('noiseFftSize');
+    // [PN] Рабочие буферы для анализа периодического шума (переиспользуются между кадрами)
+    let rtaTimeData = null;
+    let rtaFftRe = null;
+    let rtaFftIm = null;
 
-        // === ЭЛЕМЕНТЫ УПРАВЛЕНИЯ ОСЯМИ ===
-        const btnXZoomIn = document.getElementById('btnXZoomIn');
-        const btnXZoomOut = document.getElementById('btnXZoomOut');
-        const scrollX = document.getElementById('scrollX');
-        const btnYZoomIn = document.getElementById('btnYZoomIn');
-        const btnYZoomOut = document.getElementById('btnYZoomOut');
-        const scrollY = document.getElementById('scrollY');
+    const rtaStartBtn = document.getElementById('rtaStartMic');
+    const rtaStopBtn  = document.getElementById('rtaStopMic');
+    const rtaScaleToggleBtn = document.getElementById('rtaScaleToggle');
+    const rtaResetZoomBtn = document.getElementById('rtaResetZoom');
+    const rtaFftSizeSel = document.getElementById('rtaFftSize');
+    const rtaSmoothSel  = document.getElementById('rtaSmoothingOct');
+    const pinkNoiseCorrection = document.getElementById('pinkNoiseCorrection');
+    const rtaCanvas = document.getElementById('rtaChart');
+    const noiseFftSizeSel = document.getElementById('noiseFftSize');
 
-        function ensureRtaChart() {
-            if (!rtaCanvas || rtaChart) return;
+    // === ЭЛЕМЕНТЫ УПРАВЛЕНИЯ ОСЯМИ ===
+    const btnXZoomIn = document.getElementById('btnXZoomIn');
+    const btnXZoomOut = document.getElementById('btnXZoomOut');
+    const scrollX = document.getElementById('scrollX');
+    const btnYZoomIn = document.getElementById('btnYZoomIn');
+    const btnYZoomOut = document.getElementById('btnYZoomOut');
+    const scrollY = document.getElementById('scrollY');
 
-            const ctx = rtaCanvas.getContext('2d');
-            
-            // Настройка градиента для линии графика
-            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(0, 242, 254, 1)');
-            gradient.addColorStop(1, 'rgba(236, 72, 153, 1)');
+    // ====================================================================================
+    // [PN] ПЕРИОДИЧЕСКИЙ РОЗОВЫЙ ШУМ (Pink PN) — DSP-ЯДРО
+    //
+    // Идея (как в REW): последовательность длиной N = размеру FFT анализатора строится
+    // в частотной области (амплитуда бина ∝ 1/√k  ->  -3 дБ/окт, случайные фазы),
+    // затем обратное БПФ даёт N отсчётов, которые зацикливаются.
+    // Т.к. период = N, каждая спектральная линия попадает ровно в бин БПФ, поэтому
+    // анализ можно делать БЕЗ окна и БЕЗ усреднения: любое N-отсчётное окно — это
+    // циклический сдвиг периода, а модуль спектра от сдвига не зависит.
+    // ====================================================================================
+    const PN_F_LOW  = 20;      // Гц — ниже не излучаем (защита динамиков/сабов)
+    const PN_F_HIGH = 20000;   // Гц — выше не излучаем
+    const PN_PEAK   = 0.8;     // пиковый уровень буфера (1.0 = 0 dBFS). Громкость — ползунком
+    const PN_CREST_ITERATIONS = 8;   // итерации снижения пик-фактора (0 = выкл.)
+    const PN_CLIP_FACTOR = 2.6;      // уровень клипа в единицах RMS при снижении пик-фактора
+    const PN_SEED = 0x5EED1234;      // фиксированное зерно -> одна и та же последовательность каждый раз
+    const ANALYSER_MAX_FFT = 32768;  // предел AnalyserNode в Web Audio
 
-            rtaChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    datasets: [{
-                        label: 'RTA',
-                        data: [], // Данные будут в формате {x: 100, y: -20}
-                        borderColor: '#00F2FE',
-                        borderWidth: 2,
-                        pointRadius: 0, // Убираем точки для производительности
-                        tension: 0.1,   // Небольшое сглаживание линий
-                        fill: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: false, 
-                    parsing: false,   
-                    normalized: true, 
-                    plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            enabled: true,
-                            intersect: false,
-                            mode: 'nearest',
-                            axis: 'x',
-                            callbacks: {
-                                label: function(context) {
-                                    const point = context.raw;
-                                    return `${Math.round(point.x)} Гц: ${point.y.toFixed(1)} dB`;
-                                }
-                            }
-                        },
-                        // === ДОБАВЛЕНО ДЛЯ МОБИЛЬНОГО ЗУМА (требует chartjs-plugin-zoom) ===
-                        zoom: {
-                            pan: {
-                                enabled: true,
-                                mode: 'xy', // Можно двигать по X и Y
-                            },
-                            zoom: {
-                                wheel: { enabled: true }, // Колесико мыши
-                                pinch: { enabled: true }, // Щипок на телефоне
-                                mode: 'xy',
-                            },
-                            limits: {
-                                x: {min: 10, max: 25000}, // Ограничение чтобы не улететь далеко
-                                y: {min: -140, max: 10}
-                            }
-                        }
-                    },
-                    scales: {
-                        x: { 
-                            type: rtaScaleType, // 'logarithmic' или 'linear'
-                            min: 20,
-                            max: 24000,
-                            ticks: { 
-                                color: '#EAEAEA',
-                                autoSkip: true,
-                                maxTicksLimit: 20,
-                                // === ОКРУГЛЕНИЕ X ДО ЦЕЛЫХ ===
-                                callback: function(value) {
-                                    if (value < 1000) return Math.round(value); // 61.9 -> 62
-                                    return (value/1000).toFixed(1) + 'k';
-                                }
-                            }, 
-                            grid: { color: 'rgba(255,255,255,0.06)' },
-                            title: { display: true, text: 'Частота (Гц)', color: '#EAEAEA' }
-                        },
-                        y: { 
-                            min: -120, 
-                            max: 0,
-                            ticks: { 
-                                color: '#EAEAEA',
-                                // === ОКРУГЛЕНИЕ Y ДО 0.1 ===
-                                callback: function(value) {
-                                    return value.toFixed(1); // -10 -> -10.0, -10.54 -> -10.5
-                                }
-                            }, 
-                            grid: { color: 'rgba(255,255,255,0.06)' }, 
-                            title: { display: true, text: 'Уровень (dB)', color: '#EAEAEA' }
-                        }
-                    },
-                    interaction: {
+    const fftPlanCache = {};
+    function getFftPlan(n) {
+        if (fftPlanCache[n]) return fftPlanCache[n];
+        const levels = Math.round(Math.log2(n));
+        const rev = new Uint32Array(n);
+        for (let i = 0; i < n; i++) {
+            let r = 0;
+            for (let b = 0; b < levels; b++) r |= ((i >> b) & 1) << (levels - 1 - b);
+            rev[i] = r;
+        }
+        const cos = new Float64Array(n / 2);
+        const sin = new Float64Array(n / 2);
+        for (let i = 0; i < n / 2; i++) {
+            cos[i] = Math.cos(2 * Math.PI * i / n);
+            sin[i] = Math.sin(2 * Math.PI * i / n);
+        }
+        return (fftPlanCache[n] = { rev, cos, sin });
+    }
+
+    // БПФ на месте (radix-2). n должно быть степенью двойки. inverse=true -> ОБПФ с нормировкой 1/n
+    function fft(re, im, inverse = false) {
+        const n = re.length;
+        const { rev, cos, sin } = getFftPlan(n);
+        for (let i = 0; i < n; i++) {
+            const j = rev[i];
+            if (j > i) {
+                let t = re[i]; re[i] = re[j]; re[j] = t;
+                t = im[i]; im[i] = im[j]; im[j] = t;
+            }
+        }
+        for (let size = 2; size <= n; size <<= 1) {
+            const half = size >> 1;
+            const step = n / size;
+            for (let i = 0; i < n; i += size) {
+                for (let j = i, k = 0; j < i + half; j++, k += step) {
+                    const l = j + half;
+                    const wr = cos[k];
+                    const wi = inverse ? sin[k] : -sin[k];
+                    const tr = re[l] * wr - im[l] * wi;
+                    const ti = re[l] * wi + im[l] * wr;
+                    re[l] = re[j] - tr; im[l] = im[j] - ti;
+                    re[j] += tr;        im[j] += ti;
+                }
+            }
+        }
+        if (inverse) {
+            const inv = 1 / n;
+            for (let i = 0; i < n; i++) { re[i] *= inv; im[i] *= inv; }
+        }
+    }
+
+    // Маленький детерминированный ГСЧ (mulberry32)
+    function makeRng(seed) {
+        let a = seed >>> 0;
+        return function () {
+            a = (a + 0x6D2B79F5) >>> 0;
+            let t = a;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    // Генерация одного периода розового PN длиной n отсчётов
+    function generatePinkPN(n, sampleRate) {
+        const half = n / 2;
+
+        // Целевая амплитуда бинов: 1/√k (розовый), только внутри рабочей полосы
+        const target = new Float64Array(half + 1);
+        for (let k = 1; k < half; k++) {
+            const f = k * sampleRate / n;
+            if (f >= PN_F_LOW && f <= PN_F_HIGH) target[k] = 1 / Math.sqrt(k);
+        }
+
+        const re = new Float64Array(n);
+        const im = new Float64Array(n);
+        const rnd = makeRng(PN_SEED ^ n);
+
+        // Случайные фазы, эрмитова симметрия -> вещественный сигнал
+        for (let k = 1; k < half; k++) {
+            const ph = rnd() * 2 * Math.PI;
+            re[k] = target[k] * Math.cos(ph);
+            im[k] = target[k] * Math.sin(ph);
+            re[n - k] = re[k];
+            im[n - k] = -im[k];
+        }
+        fft(re, im, true);
+
+        // Снижение пик-фактора: клип во времени -> возврат точных амплитуд спектра (фазы оставляем).
+        // После последней итерации модуль спектра ТОЧНО равен target, а пики ниже, чем у "голых" случайных фаз.
+        for (let it = 0; it < PN_CREST_ITERATIONS; it++) {
+            let sumSq = 0;
+            for (let i = 0; i < n; i++) sumSq += re[i] * re[i];
+            const lim = PN_CLIP_FACTOR * Math.sqrt(sumSq / n);
+            for (let i = 0; i < n; i++) {
+                im[i] = 0;
+                if (re[i] > lim) re[i] = lim;
+                else if (re[i] < -lim) re[i] = -lim;
+            }
+            fft(re, im, false);
+            for (let k = 0; k <= half; k++) {
+                const t = target[k];
+                const m = Math.hypot(re[k], im[k]);
+                let cr = 1, ci = 0;
+                if (m > 1e-12) { cr = re[k] / m; ci = im[k] / m; }
+                re[k] = t * cr;
+                im[k] = t * ci;
+                if (k > 0 && k < half) { re[n - k] = re[k]; im[n - k] = -im[k]; }
+            }
+            re[0] = 0; im[0] = 0; re[half] = 0; im[half] = 0;
+            fft(re, im, true);
+        }
+
+        // Нормировка по пику
+        const out = new Float32Array(n);
+        let peak = 0;
+        for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(re[i]));
+        const g = peak > 0 ? PN_PEAK / peak : 1;
+        for (let i = 0; i < n; i++) out[i] = re[i] * g;
+        return out;
+    }
+
+    // Спектр БЕЗ окна (прямоугольное) для N отсчётов времени. Уровень бина = амплитуда синусоиды в dBFS.
+    // Заполняет outFreqs / outMags бинами 20 Гц .. 24 кГц.
+    function computeRectSpectrum(timeData, sampleRate, outFreqs, outMags) {
+        const n = timeData.length;
+        if (!rtaFftRe || rtaFftRe.length !== n) {
+            rtaFftRe = new Float64Array(n);
+            rtaFftIm = new Float64Array(n);
+        }
+        for (let i = 0; i < n; i++) { rtaFftRe[i] = timeData[i]; rtaFftIm[i] = 0; }
+        fft(rtaFftRe, rtaFftIm, false);
+
+        const scale = 2 / n;
+        for (let k = 1; k < n / 2; k++) {
+            const f = k * sampleRate / n;
+            if (f < 20) continue;
+            if (f > 24000) break;
+            const amp = Math.sqrt(rtaFftRe[k] * rtaFftRe[k] + rtaFftIm[k] * rtaFftIm[k]) * scale;
+            outFreqs.push(f);
+            outMags.push(20 * Math.log10(amp + 1e-9)); // пол ≈ -180 dB
+        }
+    }
+
+    function ensureRtaChart() {
+        if (!rtaCanvas || rtaChart) return;
+
+        const ctx = rtaCanvas.getContext('2d');
+
+        // Настройка градиента для линии графика
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(0, 242, 254, 1)');
+        gradient.addColorStop(1, 'rgba(236, 72, 153, 1)');
+
+        rtaChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'RTA',
+                    data: [], // Данные будут в формате {x: 100, y: -20}
+                    borderColor: '#00F2FE',
+                    borderWidth: 2,
+                    pointRadius: 0, // Убираем точки для производительности
+                    tension: 0.1,   // Небольшое сглаживание линий
+                    fill: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                parsing: false,
+                normalized: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        intersect: false,
                         mode: 'nearest',
                         axis: 'x',
-                        intersect: false
+                        callbacks: {
+                            label: function(context) {
+                                const point = context.raw;
+                                return `${Math.round(point.x)} Гц: ${point.y.toFixed(1)} dB`;
+                            }
+                        }
+                    },
+                    // === ДЛЯ МОБИЛЬНОГО ЗУМА (требует chartjs-plugin-zoom) ===
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'xy', // Можно двигать по X и Y
+                        },
+                        zoom: {
+                            wheel: { enabled: true }, // Колесико мыши
+                            pinch: { enabled: true }, // Щипок на телефоне
+                            mode: 'xy',
+                        },
+                        limits: {
+                            x: {min: 10, max: 25000}, // Ограничение чтобы не улететь далеко
+                            y: {min: -140, max: 10}
+                        }
                     }
+                },
+                scales: {
+                    x: {
+                        type: rtaScaleType, // 'logarithmic' или 'linear'
+                        min: 20,
+                        max: 24000,
+                        ticks: {
+                            color: '#EAEAEA',
+                            autoSkip: true,
+                            maxTicksLimit: 20,
+                            // === ОКРУГЛЕНИЕ X ДО ЦЕЛЫХ ===
+                            callback: function(value) {
+                                if (value < 1000) return Math.round(value); // 61.9 -> 62
+                                return (value/1000).toFixed(1) + 'k';
+                            }
+                        },
+                        grid: { color: 'rgba(255,255,255,0.06)' },
+                        title: { display: true, text: 'Частота (Гц)', color: '#EAEAEA' }
+                    },
+                    y: {
+                        min: -120,
+                        max: 0,
+                        ticks: {
+                            color: '#EAEAEA',
+                            // === ОКРУГЛЕНИЕ Y ДО 0.1 ===
+                            callback: function(value) {
+                                return value.toFixed(1); // -10 -> -10.0, -10.54 -> -10.5
+                            }
+                        },
+                        grid: { color: 'rgba(255,255,255,0.06)' },
+                        title: { display: true, text: 'Уровень (dB)', color: '#EAEAEA' }
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
                 }
-            });
+            }
+        });
 
-            // === ЛОГИКА ЗУМА МЫШЬЮ ===
-let isDragging = false;
-            let dragStart = { x: 0, y: 0 }; // Координаты в пикселях
-            let dragRect = null;
+        // === ЛОГИКА ЗУМА МЫШЬЮ ===
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 }; // Координаты в пикселях
+        let dragRect = null;
 
-            // Хелпер для получения координат внутри канваса
-            const getCanvasRelativeCoords = (e) => {
-                const rect = rtaCanvas.getBoundingClientRect();
-                return {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                };
+        // Хелпер для получения координат внутри канваса
+        const getCanvasRelativeCoords = (e) => {
+            const rect = rtaCanvas.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        };
+
+        const updateDragRect = (left, top, width, height) => {
+            dragRect.style.left = left + 'px';
+            dragRect.style.top = top + 'px';
+            dragRect.style.width = width + 'px';
+            dragRect.style.height = height + 'px';
+        };
+
+        rtaCanvas.addEventListener('mousedown', (e) => {
+            const coords = getCanvasRelativeCoords(e);
+            const chartArea = rtaChart.chartArea;
+
+            // Проверка клика внутри области графика
+            if (coords.x < chartArea.left || coords.x > chartArea.right ||
+                coords.y < chartArea.top || coords.y > chartArea.bottom) return;
+
+            isDragging = true;
+            dragStart = coords;
+
+            // Создаем визуальный прямоугольник
+            if (!dragRect) {
+                dragRect = document.createElement('div');
+                dragRect.style.position = 'absolute';
+                dragRect.style.border = '1px solid var(--accent-cyan)';
+                dragRect.style.backgroundColor = 'rgba(0, 242, 254, 0.2)';
+                dragRect.style.pointerEvents = 'none';
+                // Важно: добавляем к родителю канваса, у которого position: relative
+                rtaCanvas.parentElement.appendChild(dragRect);
+            }
+            dragRect.style.display = 'block';
+            // Начальная позиция (нулевой размер)
+            updateDragRect(coords.x, coords.y, 0, 0);
+        });
+
+        rtaCanvas.addEventListener('mousemove', (e) => {
+            if (!isDragging || !dragRect) return;
+
+            const coords = getCanvasRelativeCoords(e);
+
+            // Ограничиваем координаты областью графика
+            const chartArea = rtaChart.chartArea;
+            const currentX = Math.max(chartArea.left, Math.min(coords.x, chartArea.right));
+            const currentY = Math.max(chartArea.top, Math.min(coords.y, chartArea.bottom));
+
+            const width = currentX - dragStart.x;
+            const height = currentY - dragStart.y;
+
+            // Math.min/abs используются, чтобы рисовать в любую сторону от точки старта
+            const left = width > 0 ? dragStart.x : currentX;
+            const top = height > 0 ? dragStart.y : currentY;
+
+            updateDragRect(left, top, Math.abs(width), Math.abs(height));
+        });
+
+        rtaCanvas.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            if (dragRect) dragRect.style.display = 'none';
+
+            const coords = getCanvasRelativeCoords(e);
+            const chartArea = rtaChart.chartArea;
+
+            // Ограничение координат
+            const endX = Math.max(chartArea.left, Math.min(coords.x, chartArea.right));
+            const endY = Math.max(chartArea.top, Math.min(coords.y, chartArea.bottom));
+
+            // Минимальный порог драга (защита от случайных кликов)
+            if (Math.abs(endX - dragStart.x) < 10 && Math.abs(endY - dragStart.y) < 10) return;
+
+            // 1. Получаем значения по осям из пикселей
+            const scaleX = rtaChart.scales.x;
+            const scaleY = rtaChart.scales.y;
+
+            const startValX = scaleX.getValueForPixel(dragStart.x);
+            const endValX = scaleX.getValueForPixel(endX);
+
+            const startValY = scaleY.getValueForPixel(dragStart.y);
+            const endValY = scaleY.getValueForPixel(endY);
+
+            // 2. Определяем min и max (так как можно тянуть в любую сторону)
+            const xMin = Math.min(startValX, endValX);
+            const xMax = Math.max(startValX, endValX);
+            const yMin = Math.min(startValY, endValY);
+            const yMax = Math.max(startValY, endValY);
+
+            // 3. Сохраняем состояние
+            rtaZoomState = {
+                x: { min: xMin, max: xMax },
+                y: { min: yMin, max: yMax }
             };
 
-            rtaCanvas.addEventListener('mousedown', (e) => {
-                const coords = getCanvasRelativeCoords(e);
-                const chartArea = rtaChart.chartArea;
+            updateRtaChartScale();
+        });
 
-                // Проверка клика внутри области графика
-                if (coords.x < chartArea.left || coords.x > chartArea.right || 
-                    coords.y < chartArea.top || coords.y > chartArea.bottom) return;
-
-                    isDragging = true;
-                dragStart = coords;
-
-                // Создаем визуальный прямоугольник
-                if (!dragRect) {
-                    dragRect = document.createElement('div');
-                    dragRect.style.position = 'absolute';
-                    dragRect.style.border = '1px solid var(--accent-cyan)';
-                    dragRect.style.backgroundColor = 'rgba(0, 242, 254, 0.2)';
-                    dragRect.style.pointerEvents = 'none';
-                    // Важно: добавляем к родителю канваса, у которого position: relative
-                    rtaCanvas.parentElement.appendChild(dragRect);
-                }
-                dragRect.style.display = 'block';
-                // Начальная позиция (нулевой размер)
-                updateDragRect(coords.x, coords.y, 0, 0);
-            });
-
-            rtaCanvas.addEventListener('mousemove', (e) => {
-                if (!isDragging || !dragRect) return;
-                
-                const coords = getCanvasRelativeCoords(e);
-                
-                // Ограничиваем координаты областью графика
-                const chartArea = rtaChart.chartArea;
-                const currentX = Math.max(chartArea.left, Math.min(coords.x, chartArea.right));
-                const currentY = Math.max(chartArea.top, Math.min(coords.y, chartArea.bottom));
-
-                const width = currentX - dragStart.x;
-                const height = currentY - dragStart.y;
-
-                // Обновляем визуализацию
-                // Math.min/abs используются, чтобы рисовать в любую сторону от точки старта
-                const left = width > 0 ? dragStart.x : currentX;
-                const top = height > 0 ? dragStart.y : currentY;
-                
-                updateDragRect(left, top, Math.abs(width), Math.abs(height));
-            });
-
-            const updateDragRect = (left, top, width, height) => {
-                dragRect.style.left = left + 'px';
-                dragRect.style.top = top + 'px';
-                dragRect.style.width = width + 'px';
-                dragRect.style.height = height + 'px';
-            };
-
-            rtaCanvas.addEventListener('mouseup', (e) => {
-                if (!isDragging) return;
+        rtaCanvas.addEventListener('mouseleave', () => {
+            if (isDragging) {
                 isDragging = false;
                 if (dragRect) dragRect.style.display = 'none';
+            }
+        });
 
-                const coords = getCanvasRelativeCoords(e);
-                const chartArea = rtaChart.chartArea;
+        rtaCanvas.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            resetRtaZoom();
+        });
 
-                // Ограничение координат
-                const endX = Math.max(chartArea.left, Math.min(coords.x, chartArea.right));
-                const endY = Math.max(chartArea.top, Math.min(coords.y, chartArea.bottom));
+        // === ПРИВЯЗКА КНОПОК ЗУМА И СКРОЛЛА ===
+        setupAxisControls();
+    }
 
-                // Минимальный порог драга (защита от случайных кликов)
-                if (Math.abs(endX - dragStart.x) < 10 && Math.abs(endY - dragStart.y) < 10) return;
+    // === УПРАВЛЕНИЕ ОСЯМИ ===
+    function setupAxisControls() {
+        // Константы пределов
+        const X_MIN_GLOBAL = 20;
+        const X_MAX_GLOBAL = 24000;
+        const Y_MIN_GLOBAL = -120;
+        const Y_MAX_GLOBAL = 0;
 
-                // 1. Получаем значения по осям из пикселей
-                const scaleX = rtaChart.scales.x;
-                const scaleY = rtaChart.scales.y;
+        // --- ZOOM X ---
+        btnXZoomIn.addEventListener('click', () => {
+            applyZoomX(0.5); // Zoom In (уменьшаем диапазон в 2 раза)
+        });
+        btnXZoomOut.addEventListener('click', () => {
+            applyZoomX(2.0); // Zoom Out (увеличиваем диапазон в 2 раза)
+        });
 
-                const startValX = scaleX.getValueForPixel(dragStart.x);
-                const endValX = scaleX.getValueForPixel(endX);
-                
-                const startValY = scaleY.getValueForPixel(dragStart.y);
-                const endValY = scaleY.getValueForPixel(endY);
+        // --- SCROLL X (Pan) ---
+        scrollX.addEventListener('input', (e) => {
+            if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
 
-                // 2. Определяем min и max (так как можно тянуть в любую сторону)
-                const xMin = Math.min(startValX, endValX);
-                const xMax = Math.max(startValX, endValX);
-                const yMin = Math.min(startValY, endValY);
-                const yMax = Math.max(startValY, endValY);
+            // Текущий логарифмический диапазон
+            const logMin = Math.log10(rtaZoomState.x.min);
+            const logMax = Math.log10(rtaZoomState.x.max);
+            const logRange = logMax - logMin;
 
-                // 3. Сохраняем состояние
-                rtaZoomState = {
-                    x: { min: xMin, max: xMax },
-                    y: { min: yMin, max: yMax }
-                };
+            // Позиция слайдера 0..100 соответствует центру вида
+            const val = e.target.value / 100; // 0..1
 
-                updateRtaChartScale();
-            });
+            // Глобальный лог диапазон
+            const logGlobalMin = Math.log10(X_MIN_GLOBAL);
+            const logGlobalMax = Math.log10(X_MAX_GLOBAL);
+            const logGlobalRange = logGlobalMax - logGlobalMin;
 
-            rtaCanvas.addEventListener('mouseleave', () => {
-                if (isDragging) {
-                    isDragging = false;
-                    if (dragRect) dragRect.style.display = 'none';
-                }
-            });
+            // Новая позиция центра (в лог. координатах)
+            const newLogCenter = logGlobalMin + val * logGlobalRange;
 
-            rtaCanvas.addEventListener('dblclick', (e) => {
-                e.preventDefault();
+            // Вычисляем новые границы, сохраняя ширину зума
+            let newLogMin = newLogCenter - logRange / 2;
+            let newLogMax = newLogCenter + logRange / 2;
+
+            // Ограничиваем выход за пределы
+            if (newLogMin < logGlobalMin) {
+                newLogMin = logGlobalMin;
+                newLogMax = newLogMin + logRange;
+            }
+            if (newLogMax > logGlobalMax) {
+                newLogMax = logGlobalMax;
+                newLogMin = newLogMax - logRange;
+            }
+
+            rtaZoomState.x.min = Math.pow(10, newLogMin);
+            rtaZoomState.x.max = Math.pow(10, newLogMax);
+            updateRtaChartScale(false); // Не обновлять слайдеры, чтобы не было петли
+        });
+
+        // --- ZOOM Y ---
+        btnYZoomIn.addEventListener('click', () => {
+            applyZoomY(0.5);
+        });
+        btnYZoomOut.addEventListener('click', () => {
+            applyZoomY(2.0);
+        });
+
+        // --- SCROLL Y (Pan) ---
+        scrollY.addEventListener('input', (e) => {
+            if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
+
+            const rangeY = rtaZoomState.y.max - rtaZoomState.y.min;
+            const val = e.target.value / 100; // 0..1
+
+            // Глобальные пределы
+            const globalRange = Y_MAX_GLOBAL - Y_MIN_GLOBAL;
+
+            // Новая позиция центра
+            const newCenter = Y_MIN_GLOBAL + val * globalRange;
+
+            let newMin = newCenter - rangeY / 2;
+            let newMax = newCenter + rangeY / 2;
+
+            // Ограничения
+            if (newMin < Y_MIN_GLOBAL) {
+                newMin = Y_MIN_GLOBAL;
+                newMax = newMin + rangeY;
+            }
+            if (newMax > Y_MAX_GLOBAL) {
+                newMax = Y_MAX_GLOBAL;
+                newMin = newMax - rangeY;
+            }
+
+            rtaZoomState.y.min = newMin;
+            rtaZoomState.y.max = newMax;
+            updateRtaChartScale(false);
+        });
+
+        // Хелперы зума
+        function applyZoomX(factor) {
+            if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
+
+            // Логарифмический зум
+            let logMin = Math.log10(rtaZoomState.x.min);
+            let logMax = Math.log10(rtaZoomState.x.max);
+            let logCenter = (logMax + logMin) / 2;
+            let logRange = (logMax - logMin) * factor;
+
+            // Ограничение максимального зума (широкий диапазон)
+            const logGlobalRange = Math.log10(X_MAX_GLOBAL) - Math.log10(X_MIN_GLOBAL);
+            if (logRange > logGlobalRange) {
+                logRange = logGlobalRange;
+                logMin = Math.log10(X_MIN_GLOBAL);
+                logMax = Math.log10(X_MAX_GLOBAL);
+            } else {
+                logMin = logCenter - logRange / 2;
+                logMax = logCenter + logRange / 2;
+            }
+
+            rtaZoomState.x.min = Math.pow(10, logMin);
+            rtaZoomState.x.max = Math.pow(10, logMax);
+
+            // Если вылетели за глобальные пределы при Zoom Out, центрируем
+            if (rtaZoomState.x.min < X_MIN_GLOBAL || rtaZoomState.x.max > X_MAX_GLOBAL) {
                 resetRtaZoom();
-            });
-
-            // === ПРИВЯЗКА КНОПОК ЗУМА И СКРОЛЛА ===
-            setupAxisControls();
-        }
-
-        // === НОВАЯ ФУНКЦИЯ УПРАВЛЕНИЯ ОСЯМИ ===
-        function setupAxisControls() {
-            // Константы пределов
-            const X_MIN_GLOBAL = 20;
-            const X_MAX_GLOBAL = 24000;
-            const Y_MIN_GLOBAL = -120;
-            const Y_MAX_GLOBAL = 0;
-
-            // --- ZOOM X ---
-            btnXZoomIn.addEventListener('click', () => {
-                applyZoomX(0.5); // Zoom In (уменьшаем диапазон в 2 раза)
-            });
-            btnXZoomOut.addEventListener('click', () => {
-                applyZoomX(2.0); // Zoom Out (увеличиваем диапазон в 2 раза)
-            });
-
-            // --- SCROLL X (Pan) ---
-            scrollX.addEventListener('input', (e) => {
-                if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
-                
-                // Текущий логарифмический диапазон
-                const logMin = Math.log10(rtaZoomState.x.min);
-                const logMax = Math.log10(rtaZoomState.x.max);
-                const logRange = logMax - logMin;
-                
-                // Позиция слайдера 0..100 соответствует центру вида
-                const val = e.target.value / 100; // 0..1
-                
-                // Глобальный лог диапазон
-                const logGlobalMin = Math.log10(X_MIN_GLOBAL);
-                const logGlobalMax = Math.log10(X_MAX_GLOBAL);
-                const logGlobalRange = logGlobalMax - logGlobalMin;
-
-                // Новая позиция центра (в лог. координатах)
-                const newLogCenter = logGlobalMin + val * logGlobalRange;
-
-                // Вычисляем новые границы, сохраняя ширину зума
-                let newLogMin = newLogCenter - logRange / 2;
-                let newLogMax = newLogCenter + logRange / 2;
-
-                // Ограничиваем выход за пределы
-                if (newLogMin < logGlobalMin) {
-                    newLogMin = logGlobalMin;
-                    newLogMax = newLogMin + logRange;
-                }
-                if (newLogMax > logGlobalMax) {
-                    newLogMax = logGlobalMax;
-                    newLogMin = newLogMax - logRange;
-                }
-
-                rtaZoomState.x.min = Math.pow(10, newLogMin);
-                rtaZoomState.x.max = Math.pow(10, newLogMax);
-                updateRtaChartScale(false); // Не обновлять слайдеры, чтобы не было петли
-            });
-
-            // --- ZOOM Y ---
-            btnYZoomIn.addEventListener('click', () => {
-                applyZoomY(0.5);
-            });
-            btnYZoomOut.addEventListener('click', () => {
-                applyZoomY(2.0);
-            });
-
-            // --- SCROLL Y (Pan) ---
-            scrollY.addEventListener('input', (e) => {
-                if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
-                
-                const rangeY = rtaZoomState.y.max - rtaZoomState.y.min;
-                const val = e.target.value / 100; // 0..1
-
-                // Глобальные пределы
-                const globalRange = Y_MAX_GLOBAL - Y_MIN_GLOBAL;
-
-                // Новая позиция центра
-                const newCenter = Y_MIN_GLOBAL + val * globalRange;
-
-                let newMin = newCenter - rangeY / 2;
-                let newMax = newCenter + rangeY / 2;
-
-                // Ограничения
-                if (newMin < Y_MIN_GLOBAL) {
-                    newMin = Y_MIN_GLOBAL;
-                    newMax = newMin + rangeY;
-                }
-                if (newMax > Y_MAX_GLOBAL) {
-                    newMax = Y_MAX_GLOBAL;
-                    newMin = newMax - rangeY;
-                }
-
-                rtaZoomState.y.min = newMin;
-                rtaZoomState.y.max = newMax;
-                updateRtaChartScale(false);
-            });
-
-            // Хелперы зума
-            function applyZoomX(factor) {
-                if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
-                
-                // Логарифмический зум
-                let logMin = Math.log10(rtaZoomState.x.min);
-                let logMax = Math.log10(rtaZoomState.x.max);
-                let logCenter = (logMax + logMin) / 2;
-                let logRange = (logMax - logMin) * factor;
-
-                // Ограничение максимального зума (широкий диапазон)
-                const logGlobalRange = Math.log10(X_MAX_GLOBAL) - Math.log10(X_MIN_GLOBAL);
-                if (logRange > logGlobalRange) {
-                    logRange = logGlobalRange;
-                    logMin = Math.log10(X_MIN_GLOBAL);
-                    logMax = Math.log10(X_MAX_GLOBAL);
-                } else {
-                    logMin = logCenter - logRange / 2;
-                    logMax = logCenter + logRange / 2;
-                }
-
-                rtaZoomState.x.min = Math.pow(10, logMin);
-                rtaZoomState.x.max = Math.pow(10, logMax);
-                
-                // Если вылетели за глобальные пределы при Zoom Out, центрируем
-                if (rtaZoomState.x.min < X_MIN_GLOBAL || rtaZoomState.x.max > X_MAX_GLOBAL) {
-                    resetRtaZoom();
-                } else {
-                    updateRtaChartScale();
-                }
-            }
-
-            function applyZoomY(factor) {
-                if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
-                
-                let min = rtaZoomState.y.min;
-                let max = rtaZoomState.y.max;
-                let center = (max + min) / 2;
-                let range = (max - min) * factor;
-
-                // Лимиты диапазона
-                const globalRange = Y_MAX_GLOBAL - Y_MIN_GLOBAL;
-                if (range > globalRange) range = globalRange;
-
-                let newMin = center - range / 2;
-                let newMax = center + range / 2;
-
-                // Ограничение значений
-                newMin = Math.max(Y_MIN_GLOBAL, newMin);
-                newMax = Math.min(Y_MAX_GLOBAL, newMax);
-
-                rtaZoomState.y.min = newMin;
-                rtaZoomState.y.max = newMax;
+            } else {
                 updateRtaChartScale();
             }
         }
 
-        function updateRtaChartScale(updateScrollbars = true) {
-            if (!rtaChart) return;
-            
-            // Обновляем тип шкалы
-            rtaChart.options.scales.x.type = rtaScaleType;
-            
-            if (rtaZoomState) {
-                // Применяем зум
-                rtaChart.options.scales.x.min = rtaZoomState.x.min;
-                rtaChart.options.scales.x.max = rtaZoomState.x.max;
-                
-                rtaChart.options.scales.y.min = rtaZoomState.y.min;
-                rtaChart.options.scales.y.max = rtaZoomState.y.max;
-            } else {
-                // Сброс к дефолту
-                rtaChart.options.scales.x.min = 20;
-                rtaChart.options.scales.x.max = 24000;
-                
-                rtaChart.options.scales.y.min = -120;
-                rtaChart.options.scales.y.max = 0;
-            }
-            
-            rtaChart.update('none');
+        function applyZoomY(factor) {
+            if (!rtaZoomState) rtaZoomState = { x: {min: X_MIN_GLOBAL, max: X_MAX_GLOBAL}, y: {min: Y_MIN_GLOBAL, max: Y_MAX_GLOBAL} };
 
-            // Синхронизация полос прокрутки
-            if (updateScrollbars) {
-                syncScrollbars();
-            }
-        }
+            let min = rtaZoomState.y.min;
+            let max = rtaZoomState.y.max;
+            let center = (max + min) / 2;
+            let range = (max - min) * factor;
 
-        function syncScrollbars() {
-            if (!scrollX || !scrollY) return;
+            // Лимиты диапазона
+            const globalRange = Y_MAX_GLOBAL - Y_MIN_GLOBAL;
+            if (range > globalRange) range = globalRange;
 
-            const X_MIN_GLOBAL = 20;
-            const X_MAX_GLOBAL = 24000;
-            const Y_MIN_GLOBAL = -120;
-            const Y_MAX_GLOBAL = 0;
+            let newMin = center - range / 2;
+            let newMax = center + range / 2;
 
-            if (rtaZoomState) {
-                // X Axis (Logarithmic mapping)
-                const logMin = Math.log10(X_MIN_GLOBAL);
-                const logMax = Math.log10(X_MAX_GLOBAL);
-                const logCenter = (Math.log10(rtaZoomState.x.max) + Math.log10(rtaZoomState.x.min)) / 2;
-                
-                // Нормализуем позицию центра от 0 до 1
-                const xVal = ((logCenter - logMin) / (logMax - logMin)) * 100;
-                scrollX.value = xVal;
+            // Ограничение значений
+            newMin = Math.max(Y_MIN_GLOBAL, newMin);
+            newMax = Math.min(Y_MAX_GLOBAL, newMax);
 
-                // Y Axis (Linear mapping)
-                const yCenter = (rtaZoomState.y.max + rtaZoomState.y.min) / 2;
-                const yVal = ((yCenter - Y_MIN_GLOBAL) / (Y_MAX_GLOBAL - Y_MIN_GLOBAL)) * 100;
-                scrollY.value = yVal;
-            } else {
-                // Если зума нет (полный обзор), слайдеры в центре
-                scrollX.value = 50;
-                scrollY.value = 50;
-            }
-        }
-
-        function resetRtaZoom() {
-            rtaZoomState = null;
+            rtaZoomState.y.min = newMin;
+            rtaZoomState.y.max = newMax;
             updateRtaChartScale();
         }
+    }
 
-        if (rtaResetZoomBtn) {
-            rtaResetZoomBtn.addEventListener('click', resetRtaZoom);
+    function updateRtaChartScale(updateScrollbars = true) {
+        if (!rtaChart) return;
+
+        // Обновляем тип шкалы
+        rtaChart.options.scales.x.type = rtaScaleType;
+
+        if (rtaZoomState) {
+            // Применяем зум
+            rtaChart.options.scales.x.min = rtaZoomState.x.min;
+            rtaChart.options.scales.x.max = rtaZoomState.x.max;
+
+            rtaChart.options.scales.y.min = rtaZoomState.y.min;
+            rtaChart.options.scales.y.max = rtaZoomState.y.max;
+        } else {
+            // Сброс к дефолту
+            rtaChart.options.scales.x.min = 20;
+            rtaChart.options.scales.x.max = 24000;
+
+            rtaChart.options.scales.y.min = -120;
+            rtaChart.options.scales.y.max = 0;
         }
 
-        function toggleRtaScale() {
-            rtaScaleType = (rtaScaleType === 'logarithmic') ? 'linear' : 'logarithmic';
-            if (rtaScaleToggleBtn) {
-                rtaScaleToggleBtn.textContent = `Шкала: ${rtaScaleType === 'logarithmic' ? 'Логарифмическая' : 'Линейная'}`;
-            }
-            updateRtaChartScale();
-        }
+        rtaChart.update('none');
 
+        // Синхронизация полос прокрутки
+        if (updateScrollbars) {
+            syncScrollbars();
+        }
+    }
+
+    function syncScrollbars() {
+        if (!scrollX || !scrollY) return;
+
+        const X_MIN_GLOBAL = 20;
+        const X_MAX_GLOBAL = 24000;
+        const Y_MIN_GLOBAL = -120;
+        const Y_MAX_GLOBAL = 0;
+
+        if (rtaZoomState) {
+            // X Axis (Logarithmic mapping)
+            const logMin = Math.log10(X_MIN_GLOBAL);
+            const logMax = Math.log10(X_MAX_GLOBAL);
+            const logCenter = (Math.log10(rtaZoomState.x.max) + Math.log10(rtaZoomState.x.min)) / 2;
+
+            // Нормализуем позицию центра от 0 до 1
+            const xVal = ((logCenter - logMin) / (logMax - logMin)) * 100;
+            scrollX.value = xVal;
+
+            // Y Axis (Linear mapping)
+            const yCenter = (rtaZoomState.y.max + rtaZoomState.y.min) / 2;
+            const yVal = ((yCenter - Y_MIN_GLOBAL) / (Y_MAX_GLOBAL - Y_MIN_GLOBAL)) * 100;
+            scrollY.value = yVal;
+        } else {
+            // Если зума нет (полный обзор), слайдеры в центре
+            scrollX.value = 50;
+            scrollY.value = 50;
+        }
+    }
+
+    function resetRtaZoom() {
+        rtaZoomState = null;
+        updateRtaChartScale();
+    }
+
+    if (rtaResetZoomBtn) {
+        rtaResetZoomBtn.addEventListener('click', resetRtaZoom);
+    }
+
+    function toggleRtaScale() {
+        rtaScaleType = (rtaScaleType === 'logarithmic') ? 'linear' : 'logarithmic';
         if (rtaScaleToggleBtn) {
-            rtaScaleToggleBtn.addEventListener('click', toggleRtaScale);
+            rtaScaleToggleBtn.textContent = `Шкала: ${rtaScaleType === 'logarithmic' ? 'Логарифмическая' : 'Линейная'}`;
+        }
+        updateRtaChartScale();
+    }
+
+    if (rtaScaleToggleBtn) {
+        rtaScaleToggleBtn.addEventListener('click', toggleRtaScale);
+    }
+
+    // [PN] Размер FFT: анализатор + (если играет Pink PN) перегенерация шума под новую длину.
+    // Длина PN ВСЕГДА равна FFT анализатора — в этом и смысл периодического шума.
+    function setRtaFftSize(size) {
+        const s = Number(size) || 2048;
+        if (rtaAnalyser) rtaAnalyser.fftSize = Math.min(s, ANALYSER_MAX_FFT);
+        if (rtaFftSizeSel) rtaFftSizeSel.value = String(s);
+
+        if (currentNoiseType === 'pn-pink' && pnPlayingLength !== getPnLength()) {
+            playNoise('pn-pink'); // перезапуск с новой длиной периода
+        }
+    }
+
+    // Синхронизация FFT размеров
+    if (noiseFftSizeSel) {
+        noiseFftSizeSel.addEventListener('change', () => {
+            setRtaFftSize(noiseFftSizeSel.value);
+        });
+    }
+
+    if (rtaFftSizeSel && noiseFftSizeSel) {
+        rtaFftSizeSel.addEventListener('change', () => {
+            noiseFftSizeSel.value = rtaFftSizeSel.value;
+            setRtaFftSize(rtaFftSizeSel.value);
+        });
+    }
+
+    function hzFromBin(binIndex, fftSize, sampleRate) {
+        return (binIndex * sampleRate) / fftSize;
+    }
+
+    // Коррекция для розового шума (+3 дБ/октава)
+    function applyPinkNoiseCorrection(freq, magnitudeDb) {
+        if (!pinkNoiseCorrection || !pinkNoiseCorrection.checked) return magnitudeDb;
+        if (freq <= 0) return magnitudeDb;
+        // Розовый шум: спад 3 дБ/окт. Компенсация: +3 дБ/окт. Ref: 1kHz.
+        const correction = 3 * Math.log2(freq / 1000);
+        return magnitudeDb + correction;
+    }
+
+    // [PN] Сглаживание 1/n октавы по мощности. Теперь O(N) через префиксные суммы и два указателя —
+    // окно больше не ограничено ±100 бинами (при FFT 16k/32k это обрезало окно на ВЧ).
+    function smooth1nOct(freqs, magsDb, n) {
+        const len = freqs.length;
+        if (!n || n <= 0 || len === 0) {
+            return freqs.map((f, i) => ({ x: f, y: magsDb[i] }));
         }
 
-        function setRtaFftSize(size) {
-            const s = Number(size) || 2048;
-            if (rtaAnalyser) rtaAnalyser.fftSize = s;
-            if (rtaFftSizeSel) rtaFftSizeSel.value = String(s);
+        const prefix = new Float64Array(len + 1);
+        for (let i = 0; i < len; i++) prefix[i + 1] = prefix[i] + Math.pow(10, magsDb[i] / 10);
+
+        const halfBand = Math.pow(2, 1 / (2 * n));
+        const points = [];
+        let lo = 0, hi = 0; // окно [lo, hi)
+
+        for (let i = 0; i < len; i++) {
+            const f = freqs[i];
+            if (f <= 20) continue; // Пропускаем инфразвук
+
+            const f1 = f / halfBand;
+            const f2 = f * halfBand;
+            while (lo < len && freqs[lo] < f1) lo++;
+            if (hi < lo) hi = lo;
+            while (hi < len && freqs[hi] <= f2) hi++;
+
+            const cnt = hi - lo;
+            const val = cnt > 0
+                ? 10 * Math.log10(Math.max((prefix[hi] - prefix[lo]) / cnt, 1e-16))
+                : magsDb[i];
+            points.push({ x: f, y: val });
+        }
+        return points;
+    }
+
+    // [PN] Прореживание точек для отрисовки. Вместо "каждая k-я точка" (которая съедала НЧ-детали)
+    // усредняем по мощности внутри логарифмических (или линейных) корзин: НЧ остаются поштучно,
+    // ВЧ усредняются.
+    function decimatePoints(points, isLog) {
+        if (points.length <= 1200) return points;
+
+        const out = [];
+        let bucket = null, sumP = 0, sumX = 0, cnt = 0;
+        const flush = () => {
+            if (cnt) out.push({ x: sumX / cnt, y: 10 * Math.log10(Math.max(sumP / cnt, 1e-16)) });
+            sumP = 0; sumX = 0; cnt = 0;
+        };
+
+        for (let i = 0; i < points.length; i++) {
+            const p = points[i];
+            const b = isLog ? Math.floor(Math.log2(p.x) * 100) : Math.floor(p.x / 20);
+            if (b !== bucket) { flush(); bucket = b; }
+            sumP += Math.pow(10, p.y / 10);
+            sumX += p.x;
+            cnt++;
+        }
+        flush();
+        return out;
+    }
+
+    async function startRtaMic() {
+        initAudio(); // Инициализация AudioContext если еще не создан
+        ensureRtaChart();
+
+        if (!navigator.mediaDevices?.getUserMedia) {
+            alert('getUserMedia не поддерживается в этом браузере.');
+            return;
         }
 
-        // Синхронизация FFT размеров
-        if (noiseFftSizeSel) {
-            noiseFftSizeSel.addEventListener('change', () => {
-                setRtaFftSize(noiseFftSizeSel.value);
-            });
-        }
+        stopRtaMic();
 
-        if (rtaFftSizeSel && noiseFftSizeSel) {
-            rtaFftSizeSel.addEventListener('change', () => {
-                noiseFftSizeSel.value = rtaFftSizeSel.value;
-                setRtaFftSize(rtaFftSizeSel.value);
-            });
-        }
-
-        function hzFromBin(binIndex, fftSize, sampleRate) {
-            return (binIndex * sampleRate) / fftSize;
-        }
-
-        // Коррекция для розового шума (+3 дБ/октава)
-        function applyPinkNoiseCorrection(freq, magnitudeDb) {
-            if (!pinkNoiseCorrection || !pinkNoiseCorrection.checked) return magnitudeDb;
-            if (freq <= 0) return magnitudeDb;
-            // Розовый шум: спад 3 дБ/окт. Компенсация: +3 дБ/окт. Ref: 1kHz.
-            const correction = 3 * Math.log2(freq / 1000);
-            return magnitudeDb + correction;
-        }
-
-        // Сглаживание спектра
-        function smooth1nOct(freqs, magsDb, n) {
-            if (!n || n <= 0 || freqs.length === 0) {
-                // Возвращаем объекты {x, y}
-                return freqs.map((f, i) => ({ x: f, y: magsDb[i] }));
-            }
-
-            const points = [];
-            for (let i = 0; i < freqs.length; i++) {
-                const f = freqs[i];
-                if (f <= 20) continue; // Пропускаем инфразвук
-
-                const bandwidth = f / n; // Примерная полоса
-                const f1 = f / Math.pow(2, 1 / (2 * n));
-                const f2 = f * Math.pow(2, 1 / (2 * n));
-
-                let sum = 0;
-                let cnt = 0;
-                // Упрощенное окно сглаживания (можно оптимизировать через sliding window)
-                for (let k = Math.max(0, i - 100); k < Math.min(freqs.length, i + 100); k++) {
-                    const fk = freqs[k];
-                    if (fk >= f1 && fk <= f2) {
-                        const lin = Math.pow(10, magsDb[k] / 20);
-                        sum += lin * lin;
-                        cnt++;
-                    }
+        try {
+            rtaStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
                 }
-                
-                // Если окно слишком узкое (на НЧ), берем сырое значение
-                const val = cnt ? (10 * Math.log10(sum / cnt)) : magsDb[i];
-                points.push({ x: f, y: val });
-            }
-            return points;
-        }
+            });
 
-        async function startRtaMic() {
-            initAudio(); // Инициализация AudioContext если еще не создан
-            ensureRtaChart();
+            rtaSourceNode = audioContext.createMediaStreamSource(rtaStream);
+            rtaAnalyser = audioContext.createAnalyser();
+            // Сглаживание по времени действует только на getFloatFrequencyData (обычные шумы / ambient).
+            // В режиме Pink PN используется getFloatTimeDomainData + собственное БПФ без окна и без усреднения.
+            rtaAnalyser.smoothingTimeConstant = 0.85;
+            rtaAnalyser.minDecibels = -120;
+            rtaAnalyser.maxDecibels = 0;
 
-            if (!navigator.mediaDevices?.getUserMedia) {
-                alert('getUserMedia не поддерживается в этом браузере.');
-                return;
-            }
+            const initialFft = (noiseFftSizeSel?.value) || (rtaFftSizeSel?.value) || 2048;
+            setRtaFftSize(initialFft);
 
-            stopRtaMic();
+            rtaSourceNode.connect(rtaAnalyser);
 
-            try {
-                rtaStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        echoCancellation: false,
-                        noiseSuppression: false,
-                        autoGainControl: false
-                    }
-                });
+            // [PN] Буфер перевыделяется в кадре, если размер FFT поменялся на лету
+            let freqData = new Float32Array(rtaAnalyser.frequencyBinCount);
 
-                rtaSourceNode = audioContext.createMediaStreamSource(rtaStream);
-                rtaAnalyser = audioContext.createAnalyser();
-                // Настройки анализатора для более плавного графика
-                rtaAnalyser.smoothingTimeConstant = 0.85; 
-                rtaAnalyser.minDecibels = -120;
-                rtaAnalyser.maxDecibels = 0;
+            isRtaDrawing = true;
 
-                const initialFft = (noiseFftSizeSel?.value) || (rtaFftSizeSel?.value) || 2048;
-                setRtaFftSize(initialFft);
+            function drawRta() {
+                if (!isRtaDrawing || !rtaAnalyser || !rtaChart) return;
 
-                rtaSourceNode.connect(rtaAnalyser);
+                const sampleRate = audioContext.sampleRate;
+                const fftSize = rtaAnalyser.fftSize;
+                const usePn = (currentNoiseType === 'pn-pink');
 
-                const bufferLength = rtaAnalyser.frequencyBinCount;
-                const dataArray = new Float32Array(bufferLength);
+                const freqs = [];
+                const mags = [];
 
-                isRtaDrawing = true;
+                if (usePn) {
+                    // [PN] Периодический шум: период = fftSize -> берём последние fftSize отсчётов
+                    // (это циклический сдвиг периода) и считаем БПФ БЕЗ окна. Без усреднения.
+                    if (!rtaTimeData || rtaTimeData.length !== fftSize) rtaTimeData = new Float32Array(fftSize);
+                    rtaAnalyser.getFloatTimeDomainData(rtaTimeData);
+                    computeRectSpectrum(rtaTimeData, sampleRate, freqs, mags);
+                } else {
+                    // Обычный путь: встроенный БПФ анализатора (окно Блэкмана + smoothingTimeConstant)
+                    const bins = rtaAnalyser.frequencyBinCount;
+                    if (freqData.length !== bins) freqData = new Float32Array(bins);
+                    rtaAnalyser.getFloatFrequencyData(freqData);
 
-                function drawRta() {
-                    if (!isRtaDrawing || !rtaAnalyser || !rtaChart) return;
-
-                    rtaAnalyser.getFloatFrequencyData(dataArray);
-
-                    const sampleRate = audioContext.sampleRate;
-                    const fftSize = rtaAnalyser.fftSize;
-                    
-                    const freqs = [];
-                    const mags = [];
-
-                    // Собираем сырые данные
-                    for (let i = 0; i < bufferLength; i++) {
+                    for (let i = 0; i < bins; i++) {
                         const freq = hzFromBin(i, fftSize, sampleRate);
                         if (freq < 20) continue; // Отсекаем < 20 Гц
                         if (freq > 24000) break; // Отсекаем > 24 кГц
-                        
-                        let magnitude = dataArray[i];
-                        if (currentNoiseType === 'pink' || pinkNoiseCorrection.checked) {
-                            magnitude = applyPinkNoiseCorrection(freq, magnitude);
-                        }
-                        
+
                         freqs.push(freq);
-                        mags.push(magnitude);
-                    }
-
-                    // Применяем сглаживание и получаем массив объектов {x, y}
-                    const n = Number(rtaSmoothSel?.value || 0);
-                    let points = smooth1nOct(freqs, mags, n);
-
-                    // Оптимизация отрисовки: прореживание точек для Log шкалы
-                    // Чтобы не рисовать тысячи точек, которые сливаются
-                    if (points.length > 1000) {
-                        const optimized = [];
-                        // На высоких частотах шаг больше
-                        const step = Math.ceil(points.length / 800); 
-                        for(let i=0; i<points.length; i+=step) {
-                            optimized.push(points[i]);
-                        }
-                        // Всегда добавляем последнюю точку
-                        optimized.push(points[points.length-1]);
-                        points = optimized;
-                    }
-
-                    // Обновляем данные графика
-                    // ВАЖНО: При использовании {x,y} не используем labels!
-                    rtaChart.data.labels = []; 
-                    rtaChart.data.datasets[0].data = points;
-                    rtaChart.update('none'); // Mode 'none' для производительности
-
-                    if (isRtaDrawing) {
-                        rtaAnimId = requestAnimationFrame(drawRta);
+                        mags.push(Number.isFinite(freqData[i]) ? freqData[i] : -160);
                     }
                 }
 
-                drawRta();
-                rtaStartBtn.classList.add('active');
-            } catch (err) {
-                console.error('Mic Error:', err);
-                alert('Ошибка доступа к микрофону. Проверьте настройки HTTPS и права доступа.');
-            }
-        }
-
-        function stopRtaMic() {
-            isRtaDrawing = false;
-            if (rtaAnimId) cancelAnimationFrame(rtaAnimId);
-            
-            if (rtaSourceNode) {
-                try { rtaSourceNode.disconnect(); } catch(e){}
-                rtaSourceNode = null;
-            }
-            if (rtaStream) {
-                rtaStream.getTracks().forEach(t => t.stop());
-                rtaStream = null;
-            }
-            if(rtaStartBtn) rtaStartBtn.classList.remove('active');
-        }
-
-        if (rtaStartBtn) rtaStartBtn.addEventListener('click', startRtaMic);
-        if (rtaStopBtn)  rtaStopBtn.addEventListener('click', stopRtaMic);
-
-        // Инициализация аудио контекста
-        function initAudio() {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                gainNode = audioContext.createGain();
-                gainNode.connect(audioContext.destination);
-                
-                noiseGainNode = audioContext.createGain();
-                noiseGainNode.connect(audioContext.destination);
-            }
-        }
-        
-        // Элементы DOM генератора
-        const frequencySlider = document.getElementById('frequency');
-        const frequencyDisplay = document.getElementById('frequencyDisplay');
-        const volumeSlider = document.getElementById('volume');
-        const volumeDisplay = document.getElementById('volumeDisplay');
-        const playToneBtn = document.getElementById('playTone');
-        const stopToneBtn = document.getElementById('stopTone');
-        const whiteNoiseBtn = document.getElementById('whiteNoise');
-        const pinkNoiseBtn = document.getElementById('pinkNoise');
-        const stopNoiseBtn = document.getElementById('stopNoise');
-        
-        // ===== ЛОГАРИФМИЧЕСКАЯ ЧАСТОТА (1 Гц .. 24 кГц) =====
-        const TONE_F_MIN = 1;
-        const TONE_F_MAX = 24000;
-        const TONE_SLIDER_MAX = 1000;
-
-        function sliderToFreq(pos) {
-            const p = Math.min(TONE_SLIDER_MAX, Math.max(0, Number(pos)));
-            const ratio = TONE_F_MAX / TONE_F_MIN;
-            return TONE_F_MIN * Math.pow(ratio, p / TONE_SLIDER_MAX);
-        }
-
-        function freqToSlider(freq) {
-            const ratio = TONE_F_MAX / TONE_F_MIN;
-            return Math.log(freq / TONE_F_MIN) / Math.log(ratio) * TONE_SLIDER_MAX;
-        }
-
-        function formatFreqHz(f) {
-            if (f < 1000) return `${Math.round(f)} Гц`;
-            return `${(f / 1000).toFixed(2)} кГц`;
-        }
-
-        // Обновление отображения частоты (лог шкала)
-        if (frequencySlider) {
-            frequencySlider.addEventListener('input', (e) => {
-                const freq = sliderToFreq(e.target.value);
-                frequencyDisplay.textContent = formatFreqHz(freq);
-                if (oscillator && isPlaying) {
-                    oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+                // Коррекция розового шума (+3 дБ/окт) — действует, если отмечен чекбокс
+                // (для 'pink' и 'pn-pink' он включается автоматически)
+                for (let i = 0; i < freqs.length; i++) {
+                    mags[i] = applyPinkNoiseCorrection(freqs[i], mags[i]);
                 }
-            });
 
-            // Инициализация дисплея при загрузке
-            const initFreq = sliderToFreq(frequencySlider.value);
-            if (frequencyDisplay) frequencyDisplay.textContent = formatFreqHz(initFreq);
+                // Сглаживание 1/n окт. и прореживание точек
+                const n = Number(rtaSmoothSel?.value || 0);
+                let points = smooth1nOct(freqs, mags, n);
+                points = decimatePoints(points, rtaScaleType === 'logarithmic');
+
+                // ВАЖНО: При использовании {x,y} не используем labels!
+                rtaChart.data.labels = [];
+                rtaChart.data.datasets[0].data = points;
+                rtaChart.update('none'); // Mode 'none' для производительности
+
+                if (isRtaDrawing) {
+                    rtaAnimId = requestAnimationFrame(drawRta);
+                }
+            }
+
+            drawRta();
+            rtaStartBtn.classList.add('active');
+        } catch (err) {
+            console.error('Mic Error:', err);
+            alert('Ошибка доступа к микрофону. Проверьте настройки HTTPS и права доступа.');
+        }
+    }
+
+    function stopRtaMic() {
+        isRtaDrawing = false;
+        if (rtaAnimId) cancelAnimationFrame(rtaAnimId);
+
+        if (rtaSourceNode) {
+            try { rtaSourceNode.disconnect(); } catch(e){}
+            rtaSourceNode = null;
+        }
+        if (rtaStream) {
+            rtaStream.getTracks().forEach(t => t.stop());
+            rtaStream = null;
+        }
+        if(rtaStartBtn) rtaStartBtn.classList.remove('active');
+    }
+
+    if (rtaStartBtn) rtaStartBtn.addEventListener('click', startRtaMic);
+    if (rtaStopBtn)  rtaStopBtn.addEventListener('click', stopRtaMic);
+
+    // Инициализация аудио контекста
+    function initAudio() {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            gainNode = audioContext.createGain();
+            gainNode.connect(audioContext.destination);
+
+            noiseGainNode = audioContext.createGain();
+            noiseGainNode.connect(audioContext.destination);
+        }
+    }
+
+    // Элементы DOM генератора
+    const frequencySlider = document.getElementById('frequency');
+    const frequencyDisplay = document.getElementById('frequencyDisplay');
+    const volumeSlider = document.getElementById('volume');
+    const volumeDisplay = document.getElementById('volumeDisplay');
+    const playToneBtn = document.getElementById('playTone');
+    const stopToneBtn = document.getElementById('stopTone');
+    const whiteNoiseBtn = document.getElementById('whiteNoise');
+    const pinkNoiseBtn = document.getElementById('pinkNoise');
+    const stopNoiseBtn = document.getElementById('stopNoise');
+
+    // [PN] Кнопка Pink PN. Если в HTML её нет (id="pinkPN"), создаём рядом с кнопкой розового шума.
+    let pinkPnBtn = document.getElementById('pinkPN');
+    if (!pinkPnBtn && pinkNoiseBtn && pinkNoiseBtn.parentNode) {
+        pinkPnBtn = document.createElement('button');
+        pinkPnBtn.id = 'pinkPN';
+        pinkPnBtn.className = pinkNoiseBtn.className;
+        pinkPnBtn.classList.remove('active');
+        pinkPnBtn.textContent = 'Pink PN';
+        pinkPnBtn.title = 'Периодический розовый шум: период = размеру FFT, анализ без окна и усреднения (как в REW)';
+        pinkNoiseBtn.insertAdjacentElement('afterend', pinkPnBtn);
+    }
+
+    // ===== ЛОГАРИФМИЧЕСКАЯ ЧАСТОТА (1 Гц .. 24 кГц) =====
+    const TONE_F_MIN = 1;
+    const TONE_F_MAX = 24000;
+    const TONE_SLIDER_MAX = 1000;
+
+    function sliderToFreq(pos) {
+        const p = Math.min(TONE_SLIDER_MAX, Math.max(0, Number(pos)));
+        const ratio = TONE_F_MAX / TONE_F_MIN;
+        return TONE_F_MIN * Math.pow(ratio, p / TONE_SLIDER_MAX);
+    }
+
+    function freqToSlider(freq) {
+        const ratio = TONE_F_MAX / TONE_F_MIN;
+        return Math.log(freq / TONE_F_MIN) / Math.log(ratio) * TONE_SLIDER_MAX;
+    }
+
+    function formatFreqHz(f) {
+        if (f < 1000) return `${Math.round(f)} Гц`;
+        return `${(f / 1000).toFixed(2)} кГц`;
+    }
+
+    // Обновление отображения частоты (лог шкала)
+    if (frequencySlider) {
+        frequencySlider.addEventListener('input', (e) => {
+            const freq = sliderToFreq(e.target.value);
+            frequencyDisplay.textContent = formatFreqHz(freq);
+            if (oscillator && isPlaying) {
+                oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+            }
+        });
+
+        // Инициализация дисплея при загрузке
+        const initFreq = sliderToFreq(frequencySlider.value);
+        if (frequencyDisplay) frequencyDisplay.textContent = formatFreqHz(initFreq);
+    }
+
+
+    // Обновление громкости
+    if (volumeSlider) {
+        volumeSlider.addEventListener('input', (e) => {
+            const volume = e.target.value;
+            volumeDisplay.textContent = `${volume}%`;
+            const gainValue = volume / 100; // Ограничиваем максимальную громкость
+
+            if (gainNode) {
+                gainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);
+            }
+            if (noiseGainNode) {
+                noiseGainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);
+            }
+        });
+    }
+
+    // Функции для тонов
+    function startTone() {
+        initAudio();
+
+        if (oscillator) {
+            oscillator.stop();
         }
 
-        
-        // Обновление громкости
-        if (volumeSlider) {
-            volumeSlider.addEventListener('input', (e) => {
-                const volume = e.target.value;
-                volumeDisplay.textContent = `${volume}%`;
-                const gainValue = volume / 100; // Ограничиваем максимальную громкость
-                
-                if (gainNode) {
-                    gainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);
-                }
-                if (noiseGainNode) {
-                    noiseGainNode.gain.setValueAtTime(gainValue, audioContext.currentTime);
-                }
-            });
+        oscillator = audioContext.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(sliderToFreq(frequencySlider.value), audioContext.currentTime);
+
+        const volume = volumeSlider.value / 100;
+        gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+
+        oscillator.connect(gainNode);
+        oscillator.start();
+
+        isPlaying = true;
+        playToneBtn.classList.add('active');
+    }
+
+    function stopTone() {
+        if (oscillator) {
+            oscillator.stop();
+            oscillator = null;
+            isPlaying = false;
+            playToneBtn.classList.remove('active');
         }
-        
-        // Функции для тонов
-        function startTone() {
-            initAudio();
-            
-            if (oscillator) {
-                oscillator.stop();
-            }
-            
-            oscillator = audioContext.createOscillator();
-            oscillator.type = 'sine';
-            oscillator.frequency.setValueAtTime(sliderToFreq(frequencySlider.value), audioContext.currentTime);
-            
-            const volume = volumeSlider.value / 100;
-            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
-            
-            oscillator.connect(gainNode);
-            oscillator.start();
-            
-            isPlaying = true;
-            playToneBtn.classList.add('active');
+    }
+
+    // Генераторы шума
+    function createWhiteNoise() {
+        const bufferSize = 2 * audioContext.sampleRate;
+        const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+
+        for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
         }
-        
-        function stopTone() {
-            if (oscillator) {
-                oscillator.stop();
-                oscillator = null;
-                isPlaying = false;
-                playToneBtn.classList.remove('active');
-            }
+
+        return noiseBuffer;
+    }
+
+    function createPinkNoise() {
+        const bufferSize = 2 * audioContext.sampleRate;
+        const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+
+        let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+
+        for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99332 * b1 + white * 0.0750759;
+            b2 = 0.96900 * b2 + white * 0.1538520;
+            b3 = 0.86650 * b3 + white * 0.3104856;
+            b4 = 0.55000 * b4 + white * 0.5329522;
+            b5 = -0.7616 * b5 - white * 0.0168980;
+            output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+            output[i] *= 0.11;
+            b6 = white * 0.115926;
         }
-        
-        // Генераторы шума
-        function createWhiteNoise() {
-            const bufferSize = 2 * audioContext.sampleRate;
-            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            
-            for (let i = 0; i < bufferSize; i++) {
-                output[i] = Math.random() * 2 - 1;
-            }
-            
-            return noiseBuffer;
-        }
-        
-        function createPinkNoise() {
-            const bufferSize = 2 * audioContext.sampleRate;
-            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-            const output = noiseBuffer.getChannelData(0);
-            
-            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
-            
-            for (let i = 0; i < bufferSize; i++) {
-                const white = Math.random() * 2 - 1;
-                b0 = 0.99886 * b0 + white * 0.0555179;
-                b1 = 0.99332 * b1 + white * 0.0750759;
-                b2 = 0.96900 * b2 + white * 0.1538520;
-                b3 = 0.86650 * b3 + white * 0.3104856;
-                b4 = 0.55000 * b4 + white * 0.5329522;
-                b5 = -0.7616 * b5 - white * 0.0168980;
-                output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
-                output[i] *= 0.11;
-                b6 = white * 0.115926;
-            }
-            
-            return noiseBuffer;
-        }
-        
-        function playNoise(type) {
-            initAudio();
-            stopNoise();
-            
-            let noiseBuffer;
-            switch(type) {
-            case 'white':
-                noiseBuffer = createWhiteNoise();
-                whiteNoiseBtn.classList.add('active');
-                    // Для белого шума не включаем коррекцию
-                if (pinkNoiseCorrection) pinkNoiseCorrection.checked = false;
-                break;
-            case 'pink':
-                noiseBuffer = createPinkNoise();
-                pinkNoiseBtn.classList.add('active');
-                    // Для розового шума включаем коррекцию
-                if (pinkNoiseCorrection) pinkNoiseCorrection.checked = true;
-                break;
-            }
-            
-            noiseSource = audioContext.createBufferSource();
-            noiseSource.buffer = noiseBuffer;
-            noiseSource.loop = true;
-            
-            const volume = volumeSlider.value / 100;
-            noiseGainNode.gain.setValueAtTime(volume, audioContext.currentTime);
-            
-            noiseSource.connect(noiseGainNode);
-            noiseSource.start();
-            
-            currentNoiseType = type;
-        }
-        
-        function stopNoise() {
-            if (noiseSource) {
-                noiseSource.stop();
-                noiseSource = null;
-            }
-            
-            whiteNoiseBtn.classList.remove('active');
-            pinkNoiseBtn.classList.remove('active');
-            currentNoiseType = null;
-            
-            // Сбрасываем коррекцию при остановке шума
+
+        return noiseBuffer;
+    }
+
+    // [PN] Длина периода PN = размер FFT анализатора (степень двойки, 32 .. 32768)
+    function getPnLength() {
+        const raw = Number(
+            (rtaAnalyser && rtaAnalyser.fftSize) ||
+            (noiseFftSizeSel && noiseFftSizeSel.value) ||
+            (rtaFftSizeSel && rtaFftSizeSel.value) ||
+            16384
+        );
+        const pow2 = Math.pow(2, Math.round(Math.log2(raw)));
+        return Math.min(ANALYSER_MAX_FFT, Math.max(32, pow2));
+    }
+
+    // [PN] Кэш: пересчитываем только при смене длины или частоты дискретизации
+    let pnBufferCache = { key: '', buffer: null };
+    let pnPlayingLength = 0;
+
+    function createPinkPN(n) {
+        const key = n + '@' + audioContext.sampleRate;
+        if (pnBufferCache.key === key && pnBufferCache.buffer) return pnBufferCache.buffer;
+
+        const data = generatePinkPN(n, audioContext.sampleRate);
+        // Буфер строго с частотой контекста — никакой передискретизации, период остаётся ровно n отсчётов
+        const buffer = audioContext.createBuffer(1, n, audioContext.sampleRate);
+        buffer.getChannelData(0).set(data);
+        pnBufferCache = { key, buffer };
+        return buffer;
+    }
+
+    function playNoise(type) {
+        initAudio();
+        stopNoise();
+
+        let noiseBuffer;
+        switch(type) {
+        case 'white':
+            noiseBuffer = createWhiteNoise();
+            whiteNoiseBtn.classList.add('active');
+            // Для белого шума не включаем коррекцию
             if (pinkNoiseCorrection) pinkNoiseCorrection.checked = false;
+            break;
+        case 'pink':
+            noiseBuffer = createPinkNoise();
+            pinkNoiseBtn.classList.add('active');
+            // Для розового шума включаем коррекцию
+            if (pinkNoiseCorrection) pinkNoiseCorrection.checked = true;
+            break;
+        case 'pn-pink': {
+            // [PN] Периодический розовый шум: период = FFT анализатора
+            const n = getPnLength();
+            noiseBuffer = createPinkPN(n);
+            pnPlayingLength = n;
+            if (pinkPnBtn) pinkPnBtn.classList.add('active');
+            // Спектр розовый (-3 дБ/окт) -> включаем компенсацию, чтобы идеальный отклик был плоским
+            if (pinkNoiseCorrection) pinkNoiseCorrection.checked = true;
+            break;
         }
-        
-        // Event listeners для генератора
-        if (playToneBtn) {
-            playToneBtn.addEventListener('click', startTone);
-        }
-        if (stopToneBtn) {
-            stopToneBtn.addEventListener('click', stopTone);
-        }
-        if (whiteNoiseBtn) {
-            whiteNoiseBtn.addEventListener('click', () => playNoise('white'));
-        }
-        if (pinkNoiseBtn) {
-            pinkNoiseBtn.addEventListener('click', () => playNoise('pink'));
-        }
-        if (stopNoiseBtn) {
-            stopNoiseBtn.addEventListener('click', stopNoise);
-        }
-        
-        // Остановка всех звуков при закрытии страницы
-        window.addEventListener('beforeunload', () => {
-            stopTone();
-            stopNoise();
-            stopRtaMic();
-        });
-
-        // Автоматическая подстройка размера графика при изменении ориентации
-        window.addEventListener('resize', () => {
-            if (rtaChart) {
-                rtaChart.resize();
-            }
-        });
-
-// Дополнительная функция для "умной" высоты
-        function adjustChartHeight() {
-            const wrapper = document.querySelector('.rta-chart-wrapper');
-            if (window.innerHeight < 500 && window.orientation !== 0) {
-        // Если телефон горизонтально
-                wrapper.style.height = '85vh';
-            } else {
-        // Если вертикально
-                wrapper.style.height = window.innerWidth < 768 ? '300px' : '400px';
-            }
         }
 
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                adjustChartHeight();
-                if (rtaChart) rtaChart.resize();
-            }, 200);
-        });
-        
+        noiseSource = audioContext.createBufferSource();
+        noiseSource.buffer = noiseBuffer;
+        noiseSource.loop = true;
+
+        const volume = volumeSlider.value / 100;
+        noiseGainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+
+        noiseSource.connect(noiseGainNode);
+        noiseSource.start();
+
+        currentNoiseType = type;
+    }
+
+    function stopNoise() {
+        if (noiseSource) {
+            noiseSource.stop();
+            noiseSource = null;
+        }
+
+        whiteNoiseBtn.classList.remove('active');
+        pinkNoiseBtn.classList.remove('active');
+        if (pinkPnBtn) pinkPnBtn.classList.remove('active');
+        currentNoiseType = null;
+        pnPlayingLength = 0;
+
+        // Сбрасываем коррекцию при остановке шума
+        if (pinkNoiseCorrection) pinkNoiseCorrection.checked = false;
+    }
+
+    // Event listeners для генератора
+    if (playToneBtn) {
+        playToneBtn.addEventListener('click', startTone);
+    }
+    if (stopToneBtn) {
+        stopToneBtn.addEventListener('click', stopTone);
+    }
+    if (whiteNoiseBtn) {
+        whiteNoiseBtn.addEventListener('click', () => playNoise('white'));
+    }
+    if (pinkNoiseBtn) {
+        pinkNoiseBtn.addEventListener('click', () => playNoise('pink'));
+    }
+    if (pinkPnBtn) {
+        pinkPnBtn.addEventListener('click', () => playNoise('pn-pink')); // [PN]
+    }
+    if (stopNoiseBtn) {
+        stopNoiseBtn.addEventListener('click', stopNoise);
+    }
+
+    // Остановка всех звуков при закрытии страницы
+    window.addEventListener('beforeunload', () => {
+        stopTone();
+        stopNoise();
+        stopRtaMic();
+    });
+
+    // Автоматическая подстройка размера графика при изменении ориентации
+    window.addEventListener('resize', () => {
+        if (rtaChart) {
+            rtaChart.resize();
+        }
+    });
+
+    // Дополнительная функция для "умной" высоты
+    function adjustChartHeight() {
+        const wrapper = document.querySelector('.rta-chart-wrapper');
+        if (window.innerHeight < 500 && window.orientation !== 0) {
+            // Если телефон горизонтально
+            wrapper.style.height = '85vh';
+        } else {
+            // Если вертикально
+            wrapper.style.height = window.innerWidth < 768 ? '300px' : '400px';
+        }
+    }
+
+    window.addEventListener('orientationchange', () => {
+        setTimeout(() => {
+            adjustChartHeight();
+            if (rtaChart) rtaChart.resize();
+        }, 200);
+    });       
         // =================== СИМУЛЯТОР КРОССОВЕРА ===================
         
         // 1. Math Core (Complex Numbers)
@@ -3681,7 +3930,7 @@ const CONFIG = {
             // Возврат к 1-based визуальной нумерации дорожек
             sourceTrack.value = 1;
             multiTrack.value = 2;
-            bitrateSelect.value = "ac3_640k"; 
+            bitrateSelect.value = "eac3_640k"; 
             replaceMode.value = "stereo";
             
             // Сброс синхронизации по умолчанию в СЕМПЛЫ
