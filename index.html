@@ -1110,6 +1110,88 @@
     box-shadow: 0 0 10px rgba(255, 85, 85, 0.5);
     transform: scale(0.98);
 }
+/* Стили для сетки карточек */
+.premium-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 15px;
+}
+
+/* Общие стили карточек */
+.premium-card {
+    background: #1e1e2f;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.premium-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.premium-card h4 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Специфичные цвета для карточек */
+.card-purple { border-left: 4px solid #9c27b0; }
+.card-orange { border-left: 4px solid #ff9800; }
+.card-red    { border-left: 4px solid #f44336; }
+.card-green  { border-left: 4px solid #4caf50; }
+.card-blue   { border-left: 4px solid #2196f3; }
+
+/* Списки внутри карточек */
+.premium-list {
+    margin: 0;
+    padding-left: 18px;
+    color: #b0b0c3;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.premium-list li {
+    margin-bottom: 8px;
+}
+
+.premium-list strong {
+    color: #ffffff;
+}
+
+/* Стили для встроенных видео в Карте 5 */
+.card-text-desc {
+    color: #b0b0c3;
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    padding-bottom: 56.25%; /* Соотношение сторон 16:9 */
+    height: 0;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #000;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
 </style>
 </head>
 <body>
@@ -1413,6 +1495,19 @@
                                     <li><strong>Сброс настроек (Reset):</strong> Одна кнопка моментально вернет громкость в 0, сбросит синхронизацию, вернет нумерацию дорожек и отключит тестовый режим.</li>
                                     <li><strong>Командная строка:</strong> Нажмите "Скопировать команду" и просто вставьте её в терминал (CMD/PowerShell) там, где лежит ваш фильм.</li>
                                 </ul>
+                            </div>
+
+                            <!-- Карта 5: Видеоинструкции (Встроенные плееры) -->
+                            <div class="premium-card card-blue">
+                                <h4>📺 Видеоинструкции</h4>
+                                                                
+                                <div class="video-container">
+                                    <iframe src="https://www.youtube.com/embed/7-pMeJshVyo" title="Audio Lab Pro Video 1" allowfullscreen></iframe>
+                                </div>
+                                
+                                <div class="video-container">
+                                    <iframe src="https://www.youtube.com/embed/KsIx6MnY_tw" title="Audio Lab Pro Video 2" allowfullscreen></iframe>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1946,6 +2041,15 @@
     let rtaFftRe = null;
     let rtaFftIm = null;
 
+    // [SNAP] Снимки спектра / импортированные графики
+    // Каждый элемент: { id, name, color, visible, dashed, offset, source:'snapshot'|'import', createdAt, meta, points:[{x,y}] }
+    let rtaSnapshots = [];
+    let rtaLivePoints = [];          // последний отображённый кадр живого спектра (то, что видно в окне FFT)
+    let rtaLiveVisible = true;
+    let rtaLiveColor = '#00F2FE';
+    const RTA_SNAP_STORAGE_KEY = 'rtaSnapshots.v1';
+    const RTA_SNAP_PALETTE = ['#EC4899', '#FACC15', '#22C55E', '#A78BFA', '#F97316', '#38BDF8', '#F43F5E', '#84CC16', '#E879F9', '#FB923C'];
+
     const rtaStartBtn = document.getElementById('rtaStartMic');
     const rtaStopBtn  = document.getElementById('rtaStopMic');
     const rtaScaleToggleBtn = document.getElementById('rtaScaleToggle');
@@ -2126,8 +2230,25 @@
         }
     }
 
+    // [SNAP] Интерполяция уровня трассы на частоте f (в логарифме частоты). Нужна для подсказки
+    // со значениями всех графиков и для автоподгонки уровня снимка.
+    function snapInterpAt(points, f) {
+        if (!points || !points.length) return null;
+        if (f < points[0].x || f > points[points.length - 1].x) return null;
+        let lo = 0, hi = points.length - 1;
+        while (hi - lo > 1) {
+            const mid = (lo + hi) >> 1;
+            if (points[mid].x <= f) lo = mid; else hi = mid;
+        }
+        const a = points[lo], b = points[hi];
+        if (a.x === b.x) return a.y;
+        const t = (Math.log(f) - Math.log(a.x)) / (Math.log(b.x) - Math.log(a.x));
+        return a.y + (b.y - a.y) * t;
+    }
+
     function ensureRtaChart() {
         if (!rtaCanvas || rtaChart) return;
+        if (typeof Chart === 'undefined') return; // [SNAP] Chart.js ещё не загружен
 
         const ctx = rtaCanvas.getContext('2d');
 
@@ -2140,13 +2261,14 @@
             type: 'line',
             data: {
                 datasets: [{
-                    label: 'RTA',
+                    label: 'Live',
                     data: [], // Данные будут в формате {x: 100, y: -20}
-                    borderColor: '#00F2FE',
+                    borderColor: rtaLiveColor,
                     borderWidth: 2,
                     pointRadius: 0, // Убираем точки для производительности
                     tension: 0.1,   // Небольшое сглаживание линий
-                    fill: false
+                    fill: false,
+                    order: 0
                 }]
             },
             options: {
@@ -2162,10 +2284,25 @@
                         intersect: false,
                         mode: 'nearest',
                         axis: 'x',
+                        // [SNAP] Показываем одну строку частоты и уровни ВСЕХ видимых графиков на ней
+                        filter: function(item, index) { return index === 0; },
                         callbacks: {
+                            title: function(items) {
+                                if (!items.length) return '';
+                                const f = items[0].raw.x;
+                                return f < 1000 ? `${Math.round(f)} Гц` : `${(f / 1000).toFixed(2)} кГц`;
+                            },
                             label: function(context) {
-                                const point = context.raw;
-                                return `${Math.round(point.x)} Гц: ${point.y.toFixed(1)} dB`;
+                                const f = context.raw.x;
+                                const chart = context.chart;
+                                const lines = [];
+                                chart.data.datasets.forEach((ds, i) => {
+                                    if (!chart.isDatasetVisible(i) || !ds.data || !ds.data.length) return;
+                                    const v = (i === context.datasetIndex) ? context.raw.y : snapInterpAt(ds.data, f);
+                                    if (v === null || !Number.isFinite(v)) return;
+                                    lines.push(`${ds.label}: ${v.toFixed(1)} dB`);
+                                });
+                                return lines;
                             }
                         }
                     },
@@ -2347,10 +2484,16 @@
 
         // === ПРИВЯЗКА КНОПОК ЗУМА И СКРОЛЛА ===
         setupAxisControls();
+
+        // [SNAP] Если есть сохранённые снимки — сразу рисуем их поверх
+        rebuildSnapshotDatasets();
     }
 
     // === УПРАВЛЕНИЕ ОСЯМИ ===
     function setupAxisControls() {
+        // [SNAP] Если каких-то элементов осей нет в HTML — просто пропускаем
+        if (!btnXZoomIn || !btnXZoomOut || !scrollX || !btnYZoomIn || !btnYZoomOut || !scrollY) return;
+
         // Константы пределов
         const X_MIN_GLOBAL = 20;
         const X_MAX_GLOBAL = 24000;
@@ -2759,6 +2902,9 @@
                 let points = smooth1nOct(freqs, mags, n);
                 points = decimatePoints(points, rtaScaleType === 'logarithmic');
 
+                // [SNAP] Запоминаем кадр, который сейчас на экране — именно его фиксирует «Снимок»
+                rtaLivePoints = points;
+
                 // ВАЖНО: При использовании {x,y} не используем labels!
                 rtaChart.data.labels = [];
                 rtaChart.data.datasets[0].data = points;
@@ -2790,10 +2936,627 @@
             rtaStream = null;
         }
         if(rtaStartBtn) rtaStartBtn.classList.remove('active');
+        // [SNAP] Последний кадр остаётся на графике и в rtaLivePoints — снимок можно сделать и после «Стоп»
     }
 
     if (rtaStartBtn) rtaStartBtn.addEventListener('click', startRtaMic);
     if (rtaStopBtn)  rtaStopBtn.addEventListener('click', stopRtaMic);
+
+    // ====================================================================================
+    // [SNAP] СНИМКИ СПЕКТРА + ИМПОРТ / ЭКСПОРТ ГРАФИКОВ
+    //
+    // • «Снимок» (или клавиша S) фиксирует спектр, отображаемый сейчас в окне FFT
+    //   (уже со сглаживанием и коррекцией), и рисует его поверх живого спектра.
+    // • Импорт: REW .txt, .frd, .csv (в т.ч. «;» и десятичная запятая), .zma, .json — кнопкой
+    //   или перетаскиванием файла на график.
+    // • Экспорт: каждого графика в TXT (совместим с REW) / CSV / JSON, всех сразу в JSON, картинка PNG.
+    // • Снимки хранятся в localStorage и переживают перезагрузку страницы.
+    //
+    // Элементы управления создаются автоматически. Если хотите разместить их сами — добавьте в HTML
+    // элементы с id: rtaSnapshotBtn, rtaSnapshotPanel (контейнер панели) — тогда будут использованы они.
+    // ====================================================================================
+
+    function snapUid() {
+        return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    }
+
+    function snapNextColor() {
+        const used = new Set(rtaSnapshots.map(t => t.color));
+        return RTA_SNAP_PALETTE.find(c => !used.has(c)) || RTA_SNAP_PALETTE[rtaSnapshots.length % RTA_SNAP_PALETTE.length];
+    }
+
+    function snapEscape(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    function snapSave() {
+        try {
+            localStorage.setItem(RTA_SNAP_STORAGE_KEY, JSON.stringify(rtaSnapshots));
+        } catch (e) {
+            console.warn('Не удалось сохранить снимки (localStorage переполнен?)', e);
+        }
+    }
+
+    function snapLoad() {
+        try {
+            const raw = localStorage.getItem(RTA_SNAP_STORAGE_KEY);
+            const arr = raw ? JSON.parse(raw) : [];
+            rtaSnapshots = Array.isArray(arr) ? arr.filter(t => t && Array.isArray(t.points)) : [];
+        } catch (e) {
+            rtaSnapshots = [];
+        }
+    }
+
+    // Пересборка наборов данных графика: [0] = живой спектр, далее — видимые снимки
+    function rebuildSnapshotDatasets() {
+        if (!rtaChart) return;
+        const live = rtaChart.data.datasets[0];
+        live.label = 'Live';
+        live.borderColor = rtaLiveColor;
+        live.hidden = !rtaLiveVisible;
+
+        const overlays = rtaSnapshots.filter(t => t.visible).map((t, i) => ({
+            label: t.name,
+            data: t.offset ? t.points.map(p => ({ x: p.x, y: p.y + t.offset })) : t.points,
+            borderColor: t.color,
+            borderWidth: 1.6,
+            borderDash: t.dashed ? [6, 4] : [],
+            pointRadius: 0,
+            tension: 0.1,
+            fill: false,
+            order: i + 1
+        }));
+
+        rtaChart.data.datasets = [live, ...overlays];
+        rtaChart.update('none');
+    }
+
+    function snapToast(text, isError) {
+        let box = document.getElementById('rtaSnapToasts');
+        if (!box) {
+            box = document.createElement('div');
+            box.id = 'rtaSnapToasts';
+            box.className = 'rta-snap-toasts';
+            document.body.appendChild(box);
+        }
+        const el = document.createElement('div');
+        el.className = 'rta-snap-toast' + (isError ? ' err' : '');
+        el.textContent = text;
+        box.appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+    }
+
+    // ---------- СНИМОК ----------
+    function takeRtaSnapshot() {
+        if (!rtaLivePoints || rtaLivePoints.length < 2) {
+            snapToast('Нет данных для снимка — сначала запустите микрофон', true);
+            return;
+        }
+        ensureRtaChart();
+
+        const now = Date.now();
+        const n = rtaSnapshots.filter(t => t.source === 'snapshot').length + 1;
+        const smoothText = rtaSmoothSel && rtaSmoothSel.selectedIndex >= 0
+            ? rtaSmoothSel.options[rtaSmoothSel.selectedIndex].text
+            : '';
+        let signal = 'Внешний';
+        if (currentNoiseType === 'white') signal = 'Белый шум';
+        else if (currentNoiseType === 'pink') signal = 'Розовый шум';
+        else if (currentNoiseType === 'pn-pink') signal = 'Pink PN';
+        else if (typeof isPlaying !== 'undefined' && isPlaying && frequencySlider) signal = 'Тон ' + formatFreqHz(sliderToFreq(frequencySlider.value));
+
+        rtaSnapshots.push({
+            id: snapUid(),
+            name: `Снимок ${n} · ${new Date(now).toLocaleTimeString()}`,
+            color: snapNextColor(),
+            visible: true,
+            dashed: false,
+            offset: 0,
+            source: 'snapshot',
+            createdAt: now,
+            meta: {
+                FFT: rtaAnalyser ? rtaAnalyser.fftSize : (rtaFftSizeSel ? rtaFftSizeSel.value : ''),
+                Smoothing: smoothText,
+                Signal: signal,
+                'Pink correction': (pinkNoiseCorrection && pinkNoiseCorrection.checked) ? 'on' : 'off',
+                'Sample rate': audioContext ? audioContext.sampleRate : ''
+            },
+            points: rtaLivePoints.map(p => ({ x: p.x, y: p.y })) // копия, чтобы живой кадр её не менял
+        });
+
+        snapSave();
+        rebuildSnapshotDatasets();
+        renderSnapshotList();
+        snapToast('Снимок спектра сохранён');
+    }
+
+    // ---------- ЭКСПОРТ ----------
+    function snapDownload(content, fileName, mime) {
+        const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function snapFileName(s) {
+        return String(s).replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_').slice(0, 80) || 'trace';
+    }
+
+    function snapStamp() {
+        return new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    }
+
+    // TXT, совместимый с импортом REW (File → Import → Import frequency response)
+    function snapToTxt(t) {
+        const lines = [];
+        lines.push('* RTA export');
+        lines.push('* Name: ' + t.name);
+        lines.push('* Created: ' + new Date(t.createdAt).toISOString());
+        if (t.meta) Object.keys(t.meta).forEach(k => lines.push(`* ${k}: ${t.meta[k]}`));
+        if (t.offset) lines.push(`* Offset applied: ${t.offset} dB`);
+        lines.push('* Freq(Hz) SPL(dB) Phase(degrees)');
+        t.points.forEach(p => lines.push(`${p.x.toFixed(4)} ${(p.y + (t.offset || 0)).toFixed(3)} 0`));
+        return lines.join('\n') + '\n';
+    }
+
+    function snapToCsv(t) {
+        const lines = ['Frequency (Hz),Level (dB)'];
+        t.points.forEach(p => lines.push(`${p.x.toFixed(4)},${(p.y + (t.offset || 0)).toFixed(3)}`));
+        return lines.join('\n') + '\n';
+    }
+
+    function exportSnapshot(t, format) {
+        const base = snapFileName(t.name);
+        if (format === 'txt') snapDownload(snapToTxt(t), base + '.txt', 'text/plain');
+        else if (format === 'csv') snapDownload(snapToCsv(t), base + '.csv', 'text/csv');
+        else snapDownload(JSON.stringify({ app: 'rta', version: 1, traces: [t] }, null, 1), base + '.json', 'application/json');
+    }
+
+    function exportAllSnapshots() {
+        if (!rtaSnapshots.length) { snapToast('Нет графиков для экспорта', true); return; }
+        snapDownload(
+            JSON.stringify({ app: 'rta', version: 1, exportedAt: Date.now(), traces: rtaSnapshots }, null, 1),
+            `rta-graphs-${snapStamp()}.json`,
+            'application/json'
+        );
+    }
+
+    // Картинка PNG: график на тёмном фоне + легенда
+    function exportRtaPng() {
+        ensureRtaChart();
+        if (!rtaChart) return;
+        const src = rtaChart.canvas;
+        const dpr = src.width / (src.clientWidth || src.width) || 1;
+        const headerH = 36, legendH = 30;
+        const out = document.createElement('canvas');
+        out.width = src.width;
+        out.height = src.height + Math.round((headerH + legendH) * dpr);
+        const c = out.getContext('2d');
+        c.fillStyle = '#0b0f17';
+        c.fillRect(0, 0, out.width, out.height);
+        c.drawImage(src, 0, Math.round(headerH * dpr));
+        c.scale(dpr, dpr);
+
+        const w = src.clientWidth || src.width;
+        c.fillStyle = '#EAEAEA';
+        c.font = '600 15px system-ui, sans-serif';
+        c.fillText('RTA — спектр', 12, 23);
+        c.fillStyle = '#9aa4b2';
+        c.font = '12px system-ui, sans-serif';
+        const stamp = new Date().toLocaleString();
+        c.fillText(stamp, w - c.measureText(stamp).width - 12, 23);
+
+        const items = [];
+        if (rtaLiveVisible && rtaLivePoints.length) items.push({ name: 'Live', color: rtaLiveColor });
+        rtaSnapshots.filter(t => t.visible).forEach(t => items.push({ name: t.name, color: t.color }));
+        let lx = 12;
+        const ly = headerH + (src.clientHeight || src.height) + 19;
+        for (const it of items) {
+            c.fillStyle = it.color;
+            c.fillRect(lx, ly - 5, 16, 3);
+            c.fillStyle = '#EAEAEA';
+            c.fillText(it.name, lx + 22, ly);
+            lx += 22 + c.measureText(it.name).width + 18;
+            if (lx > w - 60) break;
+        }
+
+        out.toBlob(blob => {
+            if (blob) snapDownload(blob, `rta-${snapStamp()}.png`, 'image/png');
+        }, 'image/png');
+    }
+
+    // ---------- ИМПОРТ ----------
+    function snapParseLine(line) {
+        const s = line.trim();
+        if (!s) return null;
+        const c = s[0];
+        if (c === '*' || c === '#' || c === ';' || c === '/') return null; // комментарии REW / FRD
+
+        let parts;
+        if (s.indexOf(';') >= 0) parts = s.split(';').map(x => x.replace(',', '.'));       // 20;-30,5
+        else if (/\s/.test(s)) parts = s.split(/\s+/).map(x => x.replace(/,$/, '').replace(',', '.')); // 20 -30.5 0 | 20<TAB>-30,5 | 20, -30
+        else parts = s.split(',');                                                          // 20,-30.5
+
+        const nums = parts.map(p => p.replace(/"/g, '').trim()).filter(Boolean).map(Number);
+        if (nums.length < 2 || !Number.isFinite(nums[0]) || !Number.isFinite(nums[1])) return null;
+        return [nums[0], nums[1]];
+    }
+
+    function snapParseText(text) {
+        const pts = [];
+        text.split(/\r?\n/).forEach(line => {
+            const r = snapParseLine(line);
+            if (r && r[0] > 0) pts.push({ x: r[0], y: r[1] });
+        });
+        pts.sort((a, b) => a.x - b.x);
+        return pts;
+    }
+
+    async function importSnapshotFiles(files) {
+        ensureRtaChart();
+        let added = 0;
+        for (const file of Array.from(files)) {
+            try {
+                const text = await file.text();
+                const baseName = file.name.replace(/\.[^.]+$/, '');
+                const trimmed = text.trim();
+
+                if (trimmed[0] === '{' || trimmed[0] === '[') {
+                    const data = JSON.parse(trimmed);
+                    const arr = Array.isArray(data) ? data : (Array.isArray(data.traces) ? data.traces : [data]);
+                    let n = 0;
+                    arr.forEach(raw => {
+                        if (!raw || !Array.isArray(raw.points)) return;
+                        const pts = raw.points
+                            .filter(p => p && Number.isFinite(+p.x) && Number.isFinite(+p.y) && +p.x > 0)
+                            .map(p => ({ x: +p.x, y: +p.y }))
+                            .sort((a, b) => a.x - b.x);
+                        if (pts.length < 2) return;
+                        rtaSnapshots.push({
+                            id: snapUid(),
+                            name: raw.name || baseName,
+                            color: typeof raw.color === 'string' ? raw.color : snapNextColor(),
+                            visible: raw.visible !== false,
+                            dashed: !!raw.dashed,
+                            offset: Number(raw.offset) || 0,
+                            source: 'import',
+                            createdAt: Number(raw.createdAt) || Date.now(),
+                            meta: Object.assign({}, raw.meta || {}, { 'Imported from': file.name }),
+                            points: pts
+                        });
+                        n++;
+                    });
+                    if (!n) snapToast(`${file.name}: в JSON не найдено графиков`, true);
+                    added += n;
+                } else {
+                    const pts = snapParseText(text);
+                    if (pts.length < 2) {
+                        snapToast(`${file.name}: не удалось распознать данные (нужны столбцы «частота уровень»)`, true);
+                        continue;
+                    }
+                    rtaSnapshots.push({
+                        id: snapUid(),
+                        name: baseName,
+                        color: snapNextColor(),
+                        visible: true,
+                        dashed: false,
+                        offset: 0,
+                        source: 'import',
+                        createdAt: Date.now(),
+                        meta: { 'Imported from': file.name, Points: pts.length },
+                        points: pts
+                    });
+                    added++;
+                }
+            } catch (e) {
+                console.error('Import error:', e);
+                snapToast(`${file.name}: ошибка чтения файла`, true);
+            }
+        }
+        if (added) {
+            snapSave();
+            rebuildSnapshotDatasets();
+            renderSnapshotList();
+            snapToast(`Импортировано графиков: ${added}`);
+        }
+    }
+
+    // Подгонка уровня графика: средний уровень 200 Гц..5 кГц совмещается с живым спектром.
+    // Если живого спектра нет (например, импорт в dB SPL) — максимум ставится на -10 dB, чтобы график попал в окно.
+    function fitSnapshotOffset(t) {
+        const ref = (rtaLivePoints && rtaLivePoints.length) ? rtaLivePoints : null;
+        if (ref) {
+            let sum = 0, cnt = 0;
+            for (let f = 200; f <= 5000; f *= Math.pow(2, 1 / 6)) {
+                const a = snapInterpAt(ref, f);
+                const b = snapInterpAt(t.points, f);
+                if (a !== null && b !== null) { sum += a - b; cnt++; }
+            }
+            if (cnt) { t.offset = Math.round(sum / cnt * 10) / 10; return; }
+        }
+        let max = -Infinity;
+        t.points.forEach(p => { if (p.x >= 20 && p.x <= 24000 && p.y > max) max = p.y; });
+        if (Number.isFinite(max)) t.offset = Math.round((-10 - max) * 10) / 10;
+    }
+
+    // ---------- UI ПАНЕЛИ ----------
+    let rtaSnapListEl = null;
+    let rtaSnapFileInput = null;
+
+    function injectSnapshotStyles() {
+        if (document.getElementById('rtaSnapStyles')) return;
+        const st = document.createElement('style');
+        st.id = 'rtaSnapStyles';
+        st.textContent = `
+        .rta-snap-panel{display:block;width:100%;max-width:100%;box-sizing:border-box;flex:0 0 100%;grid-column:1 / -1;clear:both;position:relative;margin:14px 0;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);color:#EAEAEA;font-size:13px}
+        .rta-snap-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+        .rta-snap-title{font-weight:600;font-size:14px}
+        .rta-snap-actions{display:flex;flex-wrap:wrap;gap:6px}
+        .rta-snap-btn{cursor:pointer;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#EAEAEA;border-radius:8px;padding:6px 10px;font-size:13px;line-height:1.2}
+        .rta-snap-btn:hover{border-color:var(--accent-cyan,#00F2FE);background:rgba(0,242,254,.12)}
+        .rta-snap-btn.primary{border:none;background:linear-gradient(90deg,var(--accent-cyan,#00F2FE),#EC4899);color:#0b0f17;font-weight:700}
+        .rta-snap-btn.sm{padding:3px 7px;font-size:11px;border-radius:6px}
+        .rta-snap-btn.danger:hover{border-color:#F43F5E;background:rgba(244,63,94,.15);color:#fda4af}
+        .rta-snap-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;max-height:360px;overflow-y:auto}
+        .rta-snap-item{border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:6px 8px;background:rgba(0,0,0,.15)}
+        .rta-snap-item.hidden-trace{opacity:.5}
+        .rta-snap-item.live{border-color:rgba(0,242,254,.3);background:rgba(0,242,254,.05)}
+        .rta-snap-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+        .rta-snap-row input[type=color]{width:24px;height:22px;padding:0;border:1px solid rgba(255,255,255,.2);border-radius:4px;background:none;cursor:pointer}
+        .rta-snap-name{flex:1 1 140px;min-width:0;background:transparent;border:1px solid transparent;border-radius:4px;color:#EAEAEA;padding:2px 4px;font-size:13px}
+        .rta-snap-name:focus{outline:none;border-color:var(--accent-cyan,#00F2FE);background:rgba(255,255,255,.05)}
+        .rta-snap-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin-top:4px;padding-left:28px;font-size:11px;color:#8b95a5}
+        .rta-snap-meta label{display:inline-flex;align-items:center;gap:4px;cursor:pointer}
+        .rta-snap-offset{width:56px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:#EAEAEA;padding:1px 4px;font-size:11px;text-align:right}
+        .rta-snap-tag{padding:1px 6px;border-radius:4px;background:rgba(236,72,153,.15);color:#f9a8d4}
+        .rta-snap-tag.import{background:rgba(167,139,250,.15);color:#c4b5fd}
+        .rta-snap-empty{padding:16px;text-align:center;color:#6b7280;border:1px dashed rgba(255,255,255,.1);border-radius:8px}
+        .rta-snap-sub{display:flex;justify-content:space-between;margin:6px 2px;font-size:11px}
+        .rta-snap-link{cursor:pointer;color:#8b95a5;background:none;border:none;padding:0;font-size:11px}
+        .rta-snap-link:hover{color:#fff}
+        .rta-snap-drop{outline:2px dashed var(--accent-cyan,#00F2FE);outline-offset:-4px}
+        .rta-snap-toasts{position:fixed;right:16px;bottom:16px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+        .rta-snap-toast{max-width:340px;padding:9px 14px;border-radius:8px;font-size:13px;background:rgba(6,78,59,.92);color:#a7f3d0;border:1px solid rgba(52,211,153,.35);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+        .rta-snap-toast.err{background:rgba(76,5,25,.92);color:#fecdd3;border-color:rgba(244,63,94,.35)}
+        `;
+        document.head.appendChild(st);
+    }
+
+    function renderSnapshotList() {
+        if (!rtaSnapListEl) return;
+        const fmt = ts => new Date(ts).toLocaleString(undefined, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        let html = `
+            <li class="rta-snap-item live">
+                <div class="rta-snap-row">
+                    <input type="checkbox" data-act="live-visible" ${rtaLiveVisible ? 'checked' : ''} title="Показывать живой спектр">
+                    <input type="color" data-act="live-color" value="${rtaLiveColor}" title="Цвет живого спектра">
+                    <span style="flex:1">Live (реальное время)</span>
+                </div>
+            </li>`;
+
+        if (!rtaSnapshots.length) {
+            html += `<li class="rta-snap-empty">Нет снимков. Нажмите «📸 Снимок» (или клавишу S), чтобы зафиксировать текущий спектр,
+                     или импортируйте файл (REW .txt, .frd, .csv, .json) — можно просто перетащить его на график.</li>`;
+        }
+
+        rtaSnapshots.forEach(t => {
+            const m = t.meta || {};
+            html += `
+            <li class="rta-snap-item ${t.visible ? '' : 'hidden-trace'}" data-id="${t.id}">
+                <div class="rta-snap-row">
+                    <input type="checkbox" data-act="visible" ${t.visible ? 'checked' : ''} title="Показать / скрыть">
+                    <input type="color" data-act="color" value="${snapEscape(t.color)}" title="Цвет">
+                    <input type="text" class="rta-snap-name" data-act="name" value="${snapEscape(t.name)}" title="Переименовать">
+                    <button class="rta-snap-btn sm" data-act="exp-txt" title="Экспорт в TXT (совместим с REW)">TXT</button>
+                    <button class="rta-snap-btn sm" data-act="exp-csv" title="Экспорт в CSV">CSV</button>
+                    <button class="rta-snap-btn sm" data-act="exp-json" title="Экспорт в JSON">JSON</button>
+                    <button class="rta-snap-btn sm danger" data-act="delete" title="Удалить">✕</button>
+                </div>
+                <div class="rta-snap-meta">
+                    <span class="rta-snap-tag ${t.source === 'import' ? 'import' : ''}">${t.source === 'import' ? 'импорт' : 'снимок'}</span>
+                    <span>${fmt(t.createdAt)}</span>
+                    ${m.FFT ? `<span>FFT ${snapEscape(m.FFT)}</span>` : ''}
+                    ${m.Smoothing ? `<span>${snapEscape(m.Smoothing)}</span>` : ''}
+                    ${m.Signal ? `<span>${snapEscape(m.Signal)}</span>` : ''}
+                    <label><input type="checkbox" data-act="dashed" ${t.dashed ? 'checked' : ''}> пунктир</label>
+                    <label title="Смещение уровня графика">смещ. <input type="number" step="0.5" class="rta-snap-offset" data-act="offset" value="${t.offset || 0}"> dB</label>
+                    <button class="rta-snap-btn sm" data-act="fit" title="Подогнать уровень к живому спектру (или в окно графика)">Подогнать</button>
+                </div>
+            </li>`;
+        });
+
+        rtaSnapListEl.innerHTML = html;
+
+        const sub = document.getElementById('rtaSnapSub');
+        if (sub) sub.style.display = rtaSnapshots.length ? 'flex' : 'none';
+        const allBtn = document.getElementById('rtaSnapToggleAll');
+        if (allBtn) allBtn.textContent = rtaSnapshots.every(t => t.visible) ? 'Скрыть все' : 'Показать все';
+    }
+
+    function snapFind(el) {
+        const li = el.closest('[data-id]');
+        return li ? rtaSnapshots.find(t => t.id === li.dataset.id) : null;
+    }
+
+    // Ищем блок, внутри которого лежат график и ОБЕ оси управления (кнопки +/− и ползунки X/Y).
+    // Если этот блок — вся карточка RTA (в ней же кнопки «Старт»/FFT), берём последний её дочерний
+    // элемент, относящийся к графику. Панель вставляется сразу ПОСЛЕ найденного элемента.
+    function snapFindPanelAnchor() {
+        const chartParts = [rtaCanvas, scrollX, scrollY, btnXZoomIn, btnXZoomOut, btnYZoomIn, btnYZoomOut].filter(Boolean);
+        const controls = [rtaStartBtn, rtaStopBtn, rtaScaleToggleBtn, rtaResetZoomBtn, rtaFftSizeSel, rtaSmoothSel].filter(Boolean);
+
+        let lca = rtaCanvas.parentElement;
+        while (lca && lca !== document.body && !chartParts.every(el => lca.contains(el))) lca = lca.parentElement;
+        if (!lca || lca === document.body) {
+            return rtaCanvas.closest('.rta-chart-wrapper') || rtaCanvas.parentElement;
+        }
+
+        // Общий блок только графика — ставим панель после него целиком
+        if (!controls.some(c => lca.contains(c))) return lca;
+
+        // Общий блок — вся карточка: ставим после последнего дочернего элемента с частями графика
+        let last = null;
+        Array.from(lca.children).forEach(ch => {
+            if (chartParts.some(el => ch.contains(el))) last = ch;
+        });
+        return last || rtaCanvas.parentElement;
+    }
+
+    function setupSnapshotUI() {
+        if (!rtaCanvas) return;
+        injectSnapshotStyles();
+
+        // 1) Кнопка «Снимок» рядом с «Сброс зума» (или рядом со «Стоп»), как кнопка Pink PN
+        let snapBtn = document.getElementById('rtaSnapshotBtn');
+        const anchorBtn = rtaResetZoomBtn || rtaStopBtn || rtaStartBtn;
+        if (!snapBtn && anchorBtn && anchorBtn.parentNode) {
+            snapBtn = document.createElement('button');
+            snapBtn.id = 'rtaSnapshotBtn';
+            snapBtn.className = anchorBtn.className;
+            snapBtn.classList.remove('active');
+            snapBtn.textContent = '📸 Снимок';
+            snapBtn.title = 'Зафиксировать текущий спектр поверх живого (клавиша S)';
+            anchorBtn.insertAdjacentElement('afterend', snapBtn);
+        }
+        if (snapBtn) snapBtn.addEventListener('click', takeRtaSnapshot);
+
+        // 2) Панель снимков: свой контейнер #rtaSnapshotPanel или создаём ПОД всем блоком графика
+        //    (после общего контейнера графика + вертикального и горизонтального ползунков),
+        //    чтобы не отнимать высоту у окна FFT и не ломать сетку колонок.
+        let panel = document.getElementById('rtaSnapshotPanel');
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = 'rtaSnapshotPanel';
+            snapFindPanelAnchor().insertAdjacentElement('afterend', panel);
+        }
+        panel.classList.add('rta-snap-panel');
+        panel.innerHTML = `
+            <div class="rta-snap-head">
+                <span class="rta-snap-title">Снимки и графики</span>
+                <div class="rta-snap-actions">
+                    <button class="rta-snap-btn primary" data-act="snapshot" title="Клавиша S">📸 Снимок</button>
+                    <button class="rta-snap-btn" data-act="import" title="REW .txt, .frd, .csv, .json">⤒ Импорт</button>
+                    <button class="rta-snap-btn" data-act="export-all" title="Сохранить все графики в один JSON">⤓ Экспорт всех</button>
+                    <button class="rta-snap-btn" data-act="export-png" title="Сохранить картинку графика">🖼 PNG</button>
+                </div>
+            </div>
+            <div class="rta-snap-sub" id="rtaSnapSub">
+                <button class="rta-snap-link" id="rtaSnapToggleAll" data-act="toggle-all">Скрыть все</button>
+                <button class="rta-snap-link" data-act="delete-all">Удалить все</button>
+            </div>
+            <ul class="rta-snap-list"></ul>
+            <input type="file" multiple accept=".txt,.csv,.frd,.zma,.json,.dat,text/plain,application/json" style="display:none">
+        `;
+        rtaSnapListEl = panel.querySelector('.rta-snap-list');
+        rtaSnapFileInput = panel.querySelector('input[type=file]');
+
+        rtaSnapFileInput.addEventListener('change', () => {
+            if (rtaSnapFileInput.files && rtaSnapFileInput.files.length) importSnapshotFiles(rtaSnapFileInput.files);
+            rtaSnapFileInput.value = '';
+        });
+
+        // Кнопки (делегирование событий)
+        panel.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-act]');
+            if (!btn) return;
+            const act = btn.dataset.act;
+            const t = snapFind(btn);
+
+            switch (act) {
+            case 'snapshot': takeRtaSnapshot(); return;
+            case 'import': rtaSnapFileInput.click(); return;
+            case 'export-all': exportAllSnapshots(); return;
+            case 'export-png': exportRtaPng(); return;
+            case 'toggle-all': {
+                const show = !rtaSnapshots.every(s => s.visible);
+                rtaSnapshots.forEach(s => { s.visible = show; });
+                break;
+            }
+            case 'delete-all':
+                if (!confirm('Удалить все снимки и импортированные графики?')) return;
+                rtaSnapshots = [];
+                break;
+            case 'exp-txt': if (t) exportSnapshot(t, 'txt'); return;
+            case 'exp-csv': if (t) exportSnapshot(t, 'csv'); return;
+            case 'exp-json': if (t) exportSnapshot(t, 'json'); return;
+            case 'delete': if (t) rtaSnapshots = rtaSnapshots.filter(s => s !== t); break;
+            case 'fit': if (t) fitSnapshotOffset(t); break;
+            default: return;
+            }
+            snapSave();
+            rebuildSnapshotDatasets();
+            renderSnapshotList();
+        });
+
+        // Чекбоксы / цвет / смещение — по change
+        panel.addEventListener('change', (e) => {
+            const el = e.target;
+            const act = el.dataset && el.dataset.act;
+            if (!act) return;
+            if (act === 'live-visible') rtaLiveVisible = el.checked;
+            else if (act === 'live-color') rtaLiveColor = el.value;
+            else {
+                const t = snapFind(el);
+                if (!t) return;
+                if (act === 'visible') t.visible = el.checked;
+                else if (act === 'dashed') t.dashed = el.checked;
+                else if (act === 'color') t.color = el.value;
+                else if (act === 'offset') t.offset = Number(el.value) || 0;
+                else if (act === 'name') t.name = el.value || t.name;
+                snapSave();
+            }
+            rebuildSnapshotDatasets();
+            if (act === 'visible') renderSnapshotList();
+        });
+
+        // Живое обновление цвета и имени без перерисовки списка (чтобы не терять фокус)
+        panel.addEventListener('input', (e) => {
+            const el = e.target;
+            const act = el.dataset && el.dataset.act;
+            if (act === 'live-color') { rtaLiveColor = el.value; rebuildSnapshotDatasets(); return; }
+            const t = snapFind(el);
+            if (!t) return;
+            if (act === 'color') { t.color = el.value; rebuildSnapshotDatasets(); }
+            else if (act === 'name') { t.name = el.value; rebuildSnapshotDatasets(); snapSave(); }
+            else if (act === 'offset') { t.offset = Number(el.value) || 0; rebuildSnapshotDatasets(); }
+        });
+
+        // 3) Перетаскивание файлов на график
+        const dropZone = rtaCanvas.parentElement;
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('rta-snap-drop'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('rta-snap-drop'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('rta-snap-drop');
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) importSnapshotFiles(e.dataTransfer.files);
+        });
+
+        // 4) Горячая клавиша S (и «Ы» в русской раскладке)
+        document.addEventListener('keydown', (e) => {
+            const tag = (e.target && e.target.tagName) || '';
+            if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+            if (e.ctrlKey || e.metaKey || e.altKey) return;
+            if (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы') {
+                e.preventDefault();
+                takeRtaSnapshot();
+            }
+        });
+
+        // 5) Загружаем сохранённые снимки и создаём график сразу, чтобы они были видны без запуска микрофона
+        snapLoad();
+        ensureRtaChart();
+        rebuildSnapshotDatasets();
+        renderSnapshotList();
+
+        // График пересчитывает размер под свою (не изменившуюся) обёртку
+        requestAnimationFrame(() => { if (rtaChart) rtaChart.resize(); });
+    }
 
     // Инициализация аудио контекста
     function initAudio() {
@@ -3074,6 +3837,7 @@
     // Дополнительная функция для "умной" высоты
     function adjustChartHeight() {
         const wrapper = document.querySelector('.rta-chart-wrapper');
+        if (!wrapper) return; // [SNAP] защита, если обёртки нет
         if (window.innerHeight < 500 && window.orientation !== 0) {
             // Если телефон горизонтально
             wrapper.style.height = '85vh';
@@ -3088,7 +3852,11 @@
             adjustChartHeight();
             if (rtaChart) rtaChart.resize();
         }, 200);
-    });       
+    });
+
+    // [SNAP] Запуск панели снимков / импорта / экспорта (в самом конце — когда все функции и элементы уже объявлены)
+    setupSnapshotUI();
+    
         // =================== СИМУЛЯТОР КРОССОВЕРА ===================
         
         // 1. Math Core (Complex Numbers)
