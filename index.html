@@ -1192,24 +1192,132 @@
     height: 100%;
     border: 0;
 }
+
+/* Кнопка RoomSim 3D в шапке */
+.roomsim-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 14px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #00b4d8, #0077b6);
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 180, 216, 0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    white-space: nowrap;
+}
+
+.roomsim-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0, 180, 216, 0.55);
+    filter: brightness(1.1);
+}
+
+.roomsim-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 4px rgba(0, 180, 216, 0.4);
+}
+
+/* На мобильных (когда меню ☰ активно) кнопка может скрываться под меню —
+   при желании её можно оставить видимой или уменьшить паддинги: */
+@media (max-width: 640px) {
+    .roomsim-btn {
+        margin-left: 8px;
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+}
+
+/* ===== ФИКСИРОВАННАЯ ШАПКА + АВТОСКРЫТИЕ ===== */
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    will-change: transform;
+}
+
+/* Шапка уезжает вверх, когда скрыта */
+.header.header--hidden {
+    transform: translateY(-100%);
+}
+
+/* Невидимая полоса 12px у верхнего края — «ловушка» для показа шапки */
+.header-hotzone {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 12px;
+    z-index: 999;        /* было 1001 */
+    background: transparent;
+    pointer-events: auto;
+}
+
+/* ===== ПАНЕЛЬ С IFRAME ===== */
+.tab-panel--roomsim {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: none;
+    background: #000;
+}
+
+.tab-panel--roomsim.active {
+    display: block;
+}
+
+.roomsim-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
 </style>
 </head>
 <body>
-<!-- КОМПАКТНАЯ ФИКСИРОВАННАЯ ШАПКА -->
-    <header class="header">
-        <div class="header-left">
-            <button class="menu-toggle" id="menuToggle" aria-label="Открыть меню">☰</button>
-            <div class="logo">AUDIO LAB PRO</div>
-        </div>
-        
-        <nav class="tabs" id="navTabs" aria-label="Основная навигация">
-            <button class="tab-btn active" data-tab="home">Главная (Инструкция)</button>
-            <button class="tab-btn" data-tab="generator">Генератор / RTA</button>
-            <button class="tab-btn" data-tab="crossover">Кроссовер</button>
-            <button class="tab-btn" data-tab="calculator">Калькулятор SPL</button>
-            <button class="tab-btn" data-tab="centerReplacer">5.1/7.1 FFmpeg</button>
-        </nav>
-    </header>
+<!-- НЕВИДИМАЯ ЗОНА-ЛОВУШКА У ВЕРХНЕГО КРАЯ (показать шапку) -->
+<div class="header-hotzone" id="headerHotzone" aria-hidden="true"></div>
+
+<!-- КОМПАКТНАЯ ФИКСИРОВАННАЯ ШАПКА (автоскрытие) -->
+<header class="header" id="mainHeader">
+    <div class="header-left">
+        <button class="menu-toggle" id="menuToggle" aria-label="Открыть меню">☰</button>
+        <div class="logo">AUDIO LAB PRO</div>
+    </div>
+
+    <nav class="tabs" id="navTabs" aria-label="Основная навигация">
+        <button class="tab-btn active" data-tab="home">Главная (Инструкция)</button>
+        <button class="tab-btn" data-tab="generator">Генератор / RTA</button>
+        <button class="tab-btn" data-tab="crossover">Кроссовер</button>
+        <button class="tab-btn" data-tab="calculator">Калькулятор SPL</button>
+        <button class="tab-btn" data-tab="centerReplacer">5.1/7.1 FFmpeg</button>
+        <button class="tab-btn" data-tab="roomsim">🎧 RoomSim 3D</button>
+    </nav>
+</header>
+
+<!-- ПАНЕЛЬ С ВСТРОЕННОЙ СТРАНИЦЕЙ RoomSim3D.html -->
+<div class="tab-panel tab-panel--roomsim" id="panel-roomsim">
+    <iframe
+        id="roomsimFrame"
+        class="roomsim-iframe"
+        src="about:blank"
+        data-src="RoomSim3D.html"
+        title="RoomSim 3D"
+        loading="lazy"
+        allow="autoplay; fullscreen; microphone">
+    </iframe>
+</div>
 
     <!-- Основной контент -->
     <main class="main-content">
@@ -1518,17 +1626,14 @@
 
         <!-- Генератор частот и шумов -->
         <section id="generator" class="tab-section">
-            <div class="section">
-                <h2>ГЕНЕРАТОР ЧАСТОТ И ШУМОВ</h2>
-                <p>Генератор тональных сигналов и различных типов шумов для тестирования аудиосистем.</p>
-                
+            <div class="section">                  
                 <div class="generator-controls">
                     <div style="grid-column: 1 / -1;">
-                        <h3>📈 RTA (МИКРОФОН)</h3>
-                        <p>Анализ спектра в реальном времени с микрофона.</p>
+                        <h3>📈 RTA анализ спектра в реальном времени с микрофона.</h3>
                         
                         <div class="rta-controls-grid">
-                            <div class="rta-input-wrapper">
+                            <!-- СКРЫТ: FFT размер -->
+                            <div class="rta-input-wrapper" hidden>
                                 <label for="rtaFftSize">FFT размер:</label>
                                 <select id="rtaFftSize" class="select-control">
                                     <option value="1024">1024</option>
@@ -1539,7 +1644,7 @@
                                     <option value="32768" selected>32768</option>
                                 </select>
                             </div>
-                            
+
                             <div class="rta-input-wrapper">
                                 <label for="rtaSmoothingOct">Сглаживание (1/n окт):</label>
                                 <select id="rtaSmoothingOct" class="select-control">
@@ -1551,7 +1656,7 @@
                                     <option value="24">1/24 окт</option>
                                 </select>
                             </div>
-                            
+
                             <div class="rta-input-wrapper">
                                 <label>Дополнительно:</label>
                                 <label class="custom-checkbox-box" for="pinkNoiseCorrection">
@@ -1945,6 +2050,66 @@
 </section>
 </main>
 <script>
+
+/* ========== АВТОСКРЫТИЕ ШАПКИ ========== */
+(function () {
+    const header  = document.getElementById('mainHeader');
+    const hotzone = document.getElementById('headerHotzone');
+    if (!header || !hotzone) return;
+
+    let hideTimer = null;
+    let pinned    = false; // «пришпилить» шапку (см. window.__headerPin ниже)
+
+    function showHeader() {
+        clearTimeout(hideTimer);
+        header.classList.remove('header--hidden');
+    }
+
+    function scheduleHide(delay = 700) {
+        if (pinned) return;
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => header.classList.add('header--hidden'), delay);
+    }
+
+    // Наведение на саму шапку — показываем; уход — прячем с задержкой
+    header.addEventListener('mouseenter', showHeader);
+    header.addEventListener('mouseleave', () => scheduleHide());
+
+    // Мышь у верхнего края экрана — показываем; ушла — прячем
+    hotzone.addEventListener('mouseenter', showHeader);
+    hotzone.addEventListener('mouseleave', () => scheduleHide());
+
+    // Показать на старте и спрятать через 2.5с бездействия
+    showHeader();
+    scheduleHide(2500);
+
+    // Публичный хелпер: можно «пришпилить» шапку на время работы с ней
+    window.__headerPin = (state) => {
+        pinned = !!state;
+        pinned ? showHeader() : scheduleHide();
+    };
+})();
+
+/* ========== ЛЕНИВАЯ ЗАГРУЗКА IFRAME ROOMSIM3D ========== */
+(function () {
+    const frame = document.getElementById('roomsimFrame');
+    if (!frame) return;
+
+    function loadIfNeeded() {
+        // src === 'about:blank' в момент первой активации вкладки
+        if (frame.getAttribute('src') === 'about:blank' || !frame.getAttribute('src')) {
+            frame.src = frame.dataset.src;
+        }
+    }
+
+    // Подписка на клик по кнопке «🎧 RoomSim 3D»
+    document.querySelectorAll('.tab-btn[data-tab="roomsim"]').forEach(btn => {
+        btn.addEventListener('click', loadIfNeeded);
+    });
+
+    // На случай, если вкладка открывается программно — экспортируем хелпер
+    window.__loadRoomsim = loadIfNeeded;
+})();
         // =================== ОБЩИЕ ФУНКЦИИ ===================
 
         // Переключение мобильного меню
@@ -1956,12 +2121,39 @@
             navTabs.classList.toggle('active');
         });
 
-            // Закрытие меню при клике на ссылку
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
-                    navTabs.classList.remove('active');
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                document.querySelectorAll('.tab-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+
+                const tabId = btn.getAttribute('data-tab');
+                const roomsimPanel = document.getElementById('panel-roomsim');
+                const mainContent  = document.querySelector('.main-content');
+
+                // === ОСОБАЯ ВЕТКА ДЛЯ ROOMSIM 3D ===
+                if (tabId === 'roomsim') {
+                    if (roomsimPanel) roomsimPanel.classList.add('active');
+                    if (mainContent)  mainContent.style.display = 'none';
+                    document.body.style.overflow = 'hidden';
+                    return;
                 }
+
+                // Обычные вкладки — убираем iframe-панель и возвращаем контент
+                if (roomsimPanel) roomsimPanel.classList.remove('active');
+                if (mainContent)  mainContent.style.display = '';
+                document.body.style.overflow = '';
+
+                const section = document.getElementById(tabId);
+                if (section) section.classList.add('active');
+
+                if (tabId === 'crossover' && typeof updateCrossoverCalc === 'function') {
+                    setTimeout(updateCrossoverCalc, 100);
+                }
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
 
