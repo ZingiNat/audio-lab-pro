@@ -1,0 +1,2469 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUBWOOFER BENCHMARK 2026 | Инженерный гид + Интерактивная АЧХ SPL (CEA-2010)</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        /* ==========================================================================
+           CSS VARIABLES & THEME ARCHITECTURE (2026 LIGHT & DARK MODES)
+           ========================================================================== */
+        :root {
+            --bg-primary: #F5F5F7;
+            --bg-secondary: #FCFBFA;
+            --bg-mesh-1: rgba(255, 214, 198, 0.35);
+            --bg-mesh-2: rgba(196, 224, 255, 0.35);
+
+            --card-bg: #FFFFFF;
+            --card-border: rgba(0, 0, 0, 0.05);
+            --card-shadow: 0 24px 48px -12px rgba(16, 24, 40, 0.06);
+            --card-hover-shadow: 0 32px 64px -12px rgba(16, 24, 40, 0.12);
+
+            --text-primary: #111827;
+            --text-secondary: #4B5563;
+            --text-muted: #6B7280;
+
+            --accent-blue: #2563EB;
+            --accent-coral: #FF7162;
+            --accent-mint: #10B981;
+            --accent-purple: #7C3AED;
+
+            --font-display: 'Syne', sans-serif;
+            --font-body: 'Inter', sans-serif;
+
+            --nav-bg: rgba(245, 245, 247, 0.82);
+            --table-stripe: #F9FAFB;
+            --table-hover: #F3F4F6;
+            --input-bg: #F3F4F6;
+            --border-subtle: rgba(0, 0, 0, 0.08);
+
+            --hero-gradient-text: linear-gradient(135deg, #111827 0%, #374151 100%);
+            --badge-bg: rgba(37, 99, 235, 0.08);
+            --badge-text: #2563EB;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #050508;
+            --bg-secondary: #0A0A12;
+            --bg-mesh-1: rgba(112, 0, 255, 0.16);
+            --bg-mesh-2: rgba(0, 240, 255, 0.14);
+
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.09);
+            --card-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+            --card-hover-shadow: 0 32px 64px -12px rgba(0, 240, 255, 0.12);
+
+            --text-primary: #F3F4F6;
+            --text-secondary: #9CA3AF;
+            --text-muted: #6B7280;
+
+            --accent-blue: #00F0FF;
+            --accent-coral: #FF4D6D;
+            --accent-mint: #00F5D4;
+            --accent-purple: #9D4EDD;
+
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+
+            --nav-bg: rgba(5, 5, 8, 0.78);
+            --table-stripe: rgba(255, 255, 255, 0.015);
+            --table-hover: rgba(255, 255, 255, 0.05);
+            --input-bg: rgba(255, 255, 255, 0.06);
+            --border-subtle: rgba(255, 255, 255, 0.1);
+
+            --hero-gradient-text: linear-gradient(135deg, #FFFFFF 0%, #00F0FF 55%, #9D4EDD 100%);
+            --badge-bg: rgba(0, 240, 255, 0.12);
+            --badge-text: #00F0FF;
+        }
+
+        /* ==========================================================================
+           RESET & GLOBAL
+           ========================================================================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; font-size: 16px; }
+
+        body {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            transition: background-color 0.45s cubic-bezier(0.16, 1, 0.3, 1), color 0.45s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .ambient-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .mesh-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(130px);
+            transition: background 0.6s ease;
+            animation: floatOrb 18s infinite alternate ease-in-out;
+        }
+
+        .mesh-orb-1 { width: 55vw; height: 55vw; top: -15%; right: -10%; background: var(--bg-mesh-1); }
+        .mesh-orb-2 { width: 50vw; height: 50vw; bottom: -15%; left: -10%; background: var(--bg-mesh-2); animation-delay: -9s; }
+
+        @keyframes floatOrb {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(-4%, 6%) scale(1.08); }
+        }
+
+        section {
+            width: 100%;
+            padding: 7rem 6vw;
+            position: relative;
+        }
+
+        .section-alt {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--card-border);
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        /* ==========================================================================
+           STICKY GLASS NAVIGATION
+           ========================================================================== */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            width: 100%;
+            padding: 1.1rem 6vw;
+            background: var(--nav-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .brand-logo {
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 1.25rem;
+            letter-spacing: -0.04em;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .brand-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            box-shadow: 0 0 12px var(--accent-blue);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2.2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.25s ease;
+        }
+
+        .nav-links a:hover { color: var(--text-primary); }
+
+        .theme-toggle-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.55rem 1.1rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-subtle);
+            background: var(--card-bg);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(12px);
+        }
+
+        .theme-toggle-btn:hover { transform: translateY(-1px); border-color: var(--accent-blue); }
+
+        /* ==========================================================================
+           EDITORIAL TYPOGRAPHY
+           ========================================================================== */
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.95rem;
+            border-radius: 999px;
+            background: var(--badge-bg);
+            color: var(--badge-text);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 1.5rem;
+        }
+
+        h1.hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(2.8rem, 6.2vw, 6.4rem);
+            font-weight: 800;
+            line-height: 0.98;
+            letter-spacing: -0.045em;
+            background: var(--hero-gradient-text);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            margin-bottom: 1.75rem;
+        }
+
+        h1.hero-title em, h2.section-title em {
+            font-family: 'Inter', serif;
+            font-style: italic;
+            font-weight: 400;
+            color: var(--accent-blue);
+            -webkit-text-fill-color: var(--accent-blue);
+        }
+
+        h2.section-title {
+            font-family: var(--font-display);
+            font-size: clamp(2.1rem, 4vw, 3.8rem);
+            font-weight: 800;
+            line-height: 1.06;
+            letter-spacing: -0.035em;
+            margin-bottom: 1.25rem;
+        }
+
+        .section-header-grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 3rem;
+            align-items: end;
+            margin-bottom: 4rem;
+        }
+
+        .section-lead {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 580px;
+        }
+
+        /* ==========================================================================
+           1. HERO
+           ========================================================================== */
+        .hero-editorial {
+            min-height: 92vh;
+            display: grid;
+            grid-template-columns: 1.35fr 0.85fr;
+            align-items: center;
+            gap: 4vw;
+            padding-top: 4rem;
+            padding-bottom: 5rem;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.1rem, 1.4vw, 1.35rem);
+            color: var(--text-secondary);
+            max-width: 680px;
+            margin-bottom: 2.75rem;
+            font-weight: 400;
+        }
+
+        .hero-cta-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 4rem;
+        }
+
+        .btn-primary {
+            padding: 1rem 2rem;
+            border-radius: 999px;
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            border: none;
+            cursor: pointer;
+        }
+
+        [data-theme="dark"] .btn-primary {
+            background: var(--accent-blue);
+            color: #050508;
+            box-shadow: 0 0 28px rgba(0, 240, 255, 0.35);
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); }
+
+        .btn-secondary {
+            padding: 1rem 1.85rem;
+            border-radius: 999px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .btn-secondary:hover { border-color: var(--accent-blue); }
+
+        .hero-kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .kpi-item .kpi-val {
+            font-family: var(--font-display);
+            font-size: clamp(1.8rem, 2.5vw, 2.5rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            color: var(--text-primary);
+        }
+
+        .kpi-item .kpi-label { font-size: 0.85rem; color: var(--text-muted); }
+
+        .hero-visual-stage {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .acoustic-ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid var(--border-subtle);
+            transition: all 0.5s ease;
+        }
+
+        .ring-outer {
+            width: 96%; height: 96%;
+            background: radial-gradient(circle at 30% 30%, var(--card-bg), transparent 75%);
+            box-shadow: var(--card-shadow);
+            animation: pulseWave 4s infinite ease-in-out;
+        }
+
+        .ring-surround {
+            width: 78%; height: 78%;
+            border: 18px solid var(--input-bg);
+            box-shadow: inset 0 10px 25px rgba(0,0,0,0.08), 0 15px 35px rgba(0,0,0,0.06);
+            animation: excursion 3.2s infinite ease-in-out;
+        }
+
+        .ring-cone {
+            width: 54%; height: 54%;
+            background: conic-gradient(from 45deg, var(--card-bg), var(--input-bg), var(--card-bg));
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            animation: excursion 3.2s infinite ease-in-out;
+        }
+
+        .dust-cap {
+            width: 44%; height: 44%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 35%, var(--accent-blue), #111827);
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFF;
+            font-family: var(--font-display);
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            font-weight: 800;
+        }
+
+        @keyframes excursion { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+        @keyframes pulseWave { 0%, 100% { transform: scale(0.98); opacity: 0.85; } 50% { transform: scale(1.02); opacity: 1; } }
+
+        /* ==========================================================================
+           2. BENTO BOX GRID
+           ========================================================================== */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+        }
+
+        .bento-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.25rem;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .bento-card:hover { transform: translateY(-4px); box-shadow: var(--card-hover-shadow); }
+
+        .col-span-7 { grid-column: span 7; }
+        .col-span-5 { grid-column: span 5; }
+        .col-span-4 { grid-column: span 4; }
+        .col-span-8 { grid-column: span 8; }
+        .col-span-6 { grid-column: span 6; }
+
+        .bento-tag {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent-blue);
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+
+        .bento-card h3 {
+            font-family: var(--font-display);
+            font-size: 1.55rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.85rem;
+            line-height: 1.2;
+        }
+
+        .bento-card p { color: var(--text-secondary); font-size: 0.96rem; }
+
+        .big-metric {
+            font-family: var(--font-display);
+            font-size: clamp(2.6rem, 4vw, 3.8rem);
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin: 1.25rem 0 0.5rem;
+        }
+
+        .accent-coral { color: var(--accent-coral); }
+        .accent-mint { color: var(--accent-mint); }
+        .accent-blue { color: var(--accent-blue); }
+
+        .bento-list {
+            list-style: none;
+            margin-top: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .bento-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.65rem;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+        }
+
+        .bento-list svg {
+            width: 18px; height: 18px; flex-shrink: 0;
+            margin-top: 3px; color: var(--accent-mint);
+        }
+
+        /* ==========================================================================
+           3. INTERACTIVE АЧХ SPL (CEA-2010) STUDIO
+           ========================================================================== */
+        .ach-studio-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 2.5rem;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .ach-top-bar {
+            display: grid;
+            grid-template-columns: 1.25fr 0.75fr;
+            gap: 2.5rem;
+            align-items: center;
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .spl-slider-box {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 1.5rem 1.75rem;
+        }
+
+        .spl-slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 0.85rem;
+            gap: 1rem;
+        }
+
+        .spl-slider-title { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
+
+        .spl-target-readout {
+            font-family: var(--font-display);
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: var(--accent-blue);
+            letter-spacing: -0.03em;
+            white-space: nowrap;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 999px;
+            background: var(--input-bg);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 2px solid var(--accent-blue);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+
+        .spl-scale-ticks {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
+
+        .ach-status-summary { display: flex; flex-direction: column; gap: 0.85rem; }
+
+        .status-pill-row { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+
+        .status-badge.capable { background: rgba(16, 185, 129, 0.14); color: var(--accent-mint); }
+        .status-badge.limited { background: rgba(255, 113, 98, 0.15); color: var(--accent-coral); }
+
+        .legend-legend-hint { font-size: 0.86rem; color: var(--text-secondary); line-height: 1.5; }
+
+        .model-toggles-header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.1rem;
+        }
+
+        .model-toggles-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+        }
+
+        .bulk-actions { display: flex; gap: 0.5rem; }
+
+        .mini-action-btn {
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-subtle);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mini-action-btn:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+        .model-toggles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+            gap: 0.65rem;
+            margin-bottom: 2rem;
+        }
+
+        .model-chip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.6rem;
+            padding: 0.65rem 0.9rem;
+            border-radius: 14px;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.22s ease;
+        }
+
+        .model-chip.off { opacity: 0.42; background: transparent; border-style: dashed; }
+
+        .model-chip-left { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
+
+        .color-swatch {
+            width: 12px; height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .model-chip-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .chip-limit-tag {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.15rem 0.45rem;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .chip-limit-tag.ok { background: rgba(16, 185, 129, 0.14); color: var(--accent-mint); }
+        .chip-limit-tag.capped { background: rgba(255, 113, 98, 0.16); color: var(--accent-coral); }
+
+        .ach-canvas-wrap { position: relative; width: 100%; height: 500px; }
+
+        .ach-legend-note {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-top: 1.25rem;
+            padding-top: 1.15rem;
+            border-top: 1px solid var(--border-subtle);
+            font-size: 0.84rem;
+            color: var(--text-muted);
+        }
+
+        .legend-sample { display: inline-flex; align-items: center; gap: 0.5rem; }
+
+        .dash-line-demo {
+            display: inline-block; width: 28px; height: 0;
+            border-top: 3px dashed var(--accent-coral);
+        }
+
+        .solid-line-demo {
+            display: inline-block; width: 28px; height: 3px;
+            background: var(--accent-blue); border-radius: 2px;
+        }
+
+        /* ==========================================================================
+           4. COMPARISON TABLE
+           ========================================================================== */
+        .table-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+            background: var(--card-bg);
+            padding: 1.25rem 1.75rem;
+            border-radius: 20px;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--card-shadow);
+        }
+
+        .filter-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+        .filter-btn {
+            padding: 0.55rem 1.1rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-subtle);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .filter-btn.active, .filter-btn:hover {
+            background: var(--accent-blue);
+            color: #FFFFFF;
+            border-color: var(--accent-blue);
+        }
+
+        [data-theme="dark"] .filter-btn.active { color: #050508; }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: var(--input-bg);
+            padding: 0.55rem 1.1rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+            min-width: 260px;
+        }
+
+        .search-box input {
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.9rem;
+            width: 100%;
+            outline: none;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            background: var(--card-bg);
+            border-radius: 24px;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(16px);
+        }
+
+        table.spec-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 1180px;
+        }
+
+        .spec-table th {
+            padding: 1.25rem 1.2rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-subtle);
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            transition: color 0.2s;
+        }
+
+        .spec-table th:hover { color: var(--accent-blue); }
+
+        .spec-table td {
+            padding: 1.25rem 1.2rem;
+            border-bottom: 1px solid var(--card-border);
+            font-size: 0.92rem;
+            vertical-align: middle;
+        }
+
+        .spec-table tbody tr { transition: background-color 0.2s ease; }
+        .spec-table tbody tr:nth-child(even) { background-color: var(--table-stripe); }
+        .spec-table tbody tr:hover { background-color: var(--table-hover); }
+
+        .model-cell { display: flex; flex-direction: column; gap: 0.25rem; }
+
+        .model-name {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .dot-inline {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .model-type { font-size: 0.78rem; color: var(--text-muted); }
+
+        .spl-badge {
+            display: inline-block;
+            padding: 0.3rem 0.65rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--accent-mint);
+        }
+
+        .spl-extreme { background: rgba(255, 113, 98, 0.14); color: var(--accent-coral); }
+
+        .value-bar-wrap { display: flex; align-items: center; gap: 0.5rem; }
+
+        .value-bar {
+            width: 54px; height: 6px;
+            border-radius: 4px;
+            background: var(--input-bg);
+            overflow: hidden;
+        }
+
+        .value-fill { height: 100%; background: var(--accent-blue); border-radius: 4px; }
+
+        .price-tag { font-weight: 700; font-size: 0.98rem; white-space: nowrap; }
+
+        /* ==========================================================================
+           5. CHARTS
+           ========================================================================== */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 2rem;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.25rem;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(16px);
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 360px;
+            margin-top: 1.5rem;
+        }
+
+        /* ==========================================================================
+           6. SMART CALCULATOR
+           ========================================================================== */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.1fr;
+            gap: 2.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 28px;
+            padding: 3rem;
+            box-shadow: var(--card-shadow);
+            backdrop-filter: blur(20px);
+        }
+
+        .control-group { margin-bottom: 1.85rem; }
+
+        .control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .control-label { font-weight: 600; font-size: 0.95rem; color: var(--text-primary); }
+
+        .control-value-pill {
+            padding: 0.25rem 0.75rem;
+            border-radius: 8px;
+            background: var(--input-bg);
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--accent-blue);
+        }
+
+        .segmented-control {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            background: var(--input-bg);
+            padding: 4px;
+            border-radius: 14px;
+            gap: 4px;
+        }
+
+        .segment-btn {
+            padding: 0.65rem 0.5rem;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .segment-btn.active {
+            background: var(--card-bg);
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .calc-output-panel {
+            background: var(--bg-primary);
+            border-radius: 22px;
+            padding: 2.25rem;
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .calc-metrics-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .calc-stat-box {
+            background: var(--card-bg);
+            padding: 1.25rem;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+        }
+
+        .calc-stat-box span {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        .calc-stat-box strong {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .recommended-cards { display: flex; flex-direction: column; gap: 0.85rem; }
+
+        .rec-item {
+            background: var(--card-bg);
+            padding: 1.1rem 1.35rem;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.25s ease;
+        }
+
+        .rec-item:hover { border-color: var(--accent-blue); }
+
+        /* ==========================================================================
+           7. TIMELINE
+           ========================================================================== */
+        .editorial-timeline {
+            position: relative;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 0;
+        }
+
+        .editorial-timeline::before {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            left: 28px;
+            width: 2px;
+            background: linear-gradient(180deg, var(--accent-blue), var(--accent-coral), var(--accent-mint));
+            opacity: 0.4;
+        }
+
+        .timeline-step { position: relative; padding-left: 84px; margin-bottom: 2.75rem; }
+        .timeline-step:last-child { margin-bottom: 0; }
+
+        .timeline-node {
+            position: absolute;
+            left: 8px; top: 0;
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            border: 2px solid var(--accent-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-display);
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(37, 99, 235, 0.2);
+        }
+
+        .timeline-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 1.85rem 2.25rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .timeline-card h4 {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-card p { color: var(--text-secondary); font-size: 0.95rem; }
+
+        /* ==========================================================================
+           FOOTER
+           ========================================================================== */
+        footer {
+            width: 100%;
+            padding: 4rem 6vw;
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 2rem;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+
+        /* ==========================================================================
+           ANIMATIONS & RESPONSIVE
+           ========================================================================== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 1100px) {
+            .hero-editorial,
+            .section-header-grid,
+            .charts-grid,
+            .calculator-grid,
+            .ach-top-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .hero-visual-stage { max-width: 380px; margin: 0 auto; }
+
+            .col-span-7, .col-span-5, .col-span-4, .col-span-8, .col-span-6 {
+                grid-column: span 12;
+            }
+        }
+
+        @media (max-width: 768px) {
+            section { padding: 4.5rem 5vw; }
+
+            .nav-links { display: none; }
+
+            .hero-kpi-strip { grid-template-columns: 1fr; gap: 1.25rem; }
+
+            .calculator-grid { padding: 1.75rem; }
+
+            .calc-metrics-row { grid-template-columns: 1fr; }
+
+            .ach-studio-card { padding: 1.4rem; }
+
+            .ach-canvas-wrap { height: 370px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Ambient Mesh Background -->
+    <div class="ambient-canvas">
+        <div class="mesh-orb mesh-orb-1"></div>
+        <div class="mesh-orb mesh-orb-2"></div>
+    </div>
+
+    <!-- Sticky Navigation -->
+    <header>
+        <a href="#" class="brand-logo">
+            <span class="brand-dot"></span>
+            ACOUSTIC LAB // 2026
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="#bento">Физика баса</a></li>
+            <li><a href="#ach-profile">АЧХ SPL (CEA-2010)</a></li>
+            <li><a href="#specs">Таблица 115+ дБ</a></li>
+            <li><a href="#analytics">Графики</a></li>
+            <li><a href="#calculator">Калькулятор</a></li>
+            <li><a href="#calibration">Интеграция</a></li>
+        </ul>
+
+        <button class="theme-toggle-btn" id="themeToggle" aria-label="Переключить тему">
+            <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span id="themeLabel">Dark Mode</span>
+        </button>
+    </header>
+
+    <!-- ==========================================================================
+         HERO
+         ========================================================================== -->
+    <section class="hero-editorial">
+        <div class="hero-content reveal">
+            <div class="eyebrow">
+                <span>Инженерный бенчмарк РФ • Редакция 2026</span>
+            </div>
+            <h1 class="hero-title">
+                Инфразвук <em>без</em> компромиссов.
+            </h1>
+            <p class="hero-subtitle">
+                Исчерпывающий гид по сабвуферам для домашнего кинотеатра, доступным в России в 2026 году. Строгий отбор: честное звуковое давление от <strong>115 дБ</strong>, глубина от <strong>15 Гц</strong>, крупные звуковые катушки и эталонный индекс <em>цена / тактильная отдача</em>.
+            </p>
+            <div class="hero-cta-row">
+                <a href="#ach-profile" class="btn-primary">
+                    Перейти к интерактивной АЧХ
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+                <a href="#specs" class="btn-secondary">Сводная таблица моделей</a>
+            </div>
+
+            <div class="hero-kpi-strip">
+                <div class="kpi-item">
+                    <div class="kpi-val">≥ 115 дБ</div>
+                    <div class="kpi-label">Порог пикового давления (CEA-2010, 2м)</div>
+                </div>
+                <div class="kpi-item">
+                    <div class="kpi-val">15 – 120 Гц</div>
+                    <div class="kpi-label">Интерактивный диапазон АЧХ</div>
+                </div>                
+                <div class="kpi-item">
+                    <div class="kpi-val">12 моделей</div>
+                    <div class="kpi-label">В наличии в РФ (официально и параллельно)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-visual-stage reveal">
+            <div class="acoustic-ring ring-outer"></div>
+            <div class="acoustic-ring ring-surround"></div>
+            <div class="acoustic-ring ring-cone">
+                <div class="dust-cap">115+ dB</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+         BENTO BOX ANALYTICS
+         ========================================================================== -->
+    <section id="bento" class="section-alt">
+        <div class="section-header-grid reveal">
+            <div>
+                <span class="eyebrow">Методология отбора</span>
+                <h2 class="section-title">Почему порог <em>115 дБ</em> меняет физику кинотеатра</h2>
+            </div>
+            <p class="section-lead">
+                Стандарт THX Reference требует 115 дБ на канале LFE в точке прослушивания. Обычные 10-дюймовые сабвуферы уходят в компрессию на 104–106 дБ, превращая взрывы в гул.
+            </p>
+        </div>
+
+        <div class="bento-grid">
+            <div class="bento-card col-span-7 reveal">
+                <div>
+                    <span class="bento-tag">Термокомпрессия и контроль</span>
+                    <h3>Звуковая катушка 2.5" — 4.0": главный индикатор честной мощности</h3>
+                    <p>
+                        Маркетинговые «1000 Вт в пике» бесполезны на маленькой катушке — она перегревается за 3 секунды басовой партии, сопротивление растет, а звуковое давление падает на 4–6 дБ. В наш рейтинг вошли только модели с многослойными катушками от <strong>65 мм (2.5")</strong> до <strong>100 мм (4")</strong> на каркасах из стекловолокна или каптона.
+                    </p>
+                </div>
+                <ul class="bento-list">
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span><strong>2.5" — 3.0" (65–76 мм):</strong> Оптимальный баланс скорости и перевариваемой мощности (500–800 Вт RMS) для комнат 20–35 м².</span>
+                    </li>
+                    <li>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span><strong>3.5" — 4.0" (89–102 мм):</strong> Тяжелая артиллерия (1000–1500+ Вт RMS) с двойными ферритовыми магнитами для помещений от 40 м² и инфразвука 15–20 Гц.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="bento-card col-span-5 reveal">
+                <div>
+                    <span class="bento-tag">Лидеры цена / давление</span>
+                    <h3>Феномен Tone Winner и Starke Sound</h3>
+                    <p>
+                        В 2026 году китайские инженерные бренды перевернули российский рынок: за цену базового 12" европейского сабвуфера вы получаете 15-дюймовый драйвер с DSP-процессором.
+                    </p>
+                </div>
+                <div>
+                    <div class="big-metric accent-blue">+7.5 дБ</div>
+                    <p style="font-size: 0.85rem;">Выигрыш в запасе давления на 25 Гц за каждый вложенный рубль у <strong>Tone Winner SW-D4000 / D6000</strong> по сравнению с классическими брендами.</p>
+                </div>
+            </div>
+
+            <div class="bento-card col-span-4 reveal">
+                <div>
+                    <span class="bento-tag">Акустическое оформление</span>
+                    <h3>ФИ против Закрытого ящика</h3>
+                    <p>
+                        На частотах 16–32 Гц фазоинвертор (ФИ) с щелевым портом дает <strong>+6…+9 дБ</strong> прироста отдачи без перегрузки хода диффузора (Xmax). Закрытый ящик (ЗЯ) требует калибра от 15"–16" для преодоления планки 115 дБ.
+                    </p>
+                </div>
+                <div class="big-metric accent-mint">15–18 Гц</div>
+            </div>
+
+            <div class="bento-card col-span-4 reveal">
+                <div>
+                    <span class="bento-tag">Аппаратная коррекция</span>
+                    <h3>Встроенный параметрический EQ</h3>
+                    <p>
+                        Комнатные моды создают пики +12 дБ на 35–50 Гц. Модели <strong>SVS Pro</strong>, <strong>Tone Winner</strong> и <strong>Klipsch RP</strong> оснащены мобильными приложениями с 3–7 полосами PEQ для выравнивания АЧХ без внешнего процессора.
+                    </p>
+                </div>
+                <div class="big-metric accent-coral">DSP App</div>
+            </div>
+
+            <div class="bento-card col-span-4 reveal">
+                <div>
+                    <span class="bento-tag">Реалии рынка РФ 2026</span>
+                    <h3>Доступность и сервис</h3>
+                    <p>
+                        Все 12 моделей в таблице поставляются в РФ через официальных дистрибьюторов или проверенные каналы с локальной гарантией на усилительные модули Class-D.
+                    </p>
+                </div>
+                <div class="big-metric">100% РФ</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+         ИНТЕРАКТИВНАЯ АЧХ SPL (CEA-2010)
+         ========================================================================== -->
+    <section id="ach-profile">
+        <div class="section-header-grid reveal">
+            <div>
+                <span class="eyebrow">Интерактивная АЧХ • Предел линейного давления</span>
+                <h2 class="section-title">Частотный профиль <em>SPL (CEA-2010)</em></h2>
+            </div>
+            <p class="section-lead">
+                Двигайте ползунок целевого SPL: когда запрошенное давление превышает реальный потолок модели на конкретной частоте, сплошная кривая обрывается и переходит в пунктир — показывая зону компрессии и клиппинга.
+            </p>
+        </div>
+
+        <div class="ach-studio-card reveal">
+            <div class="ach-top-bar">
+                <div class="spl-slider-box">
+                    <div class="spl-slider-header">
+                        <label for="targetSplSlider" class="spl-slider-title">
+                            Целевой уровень звукового давления (SPL)
+                        </label>
+                        <span class="spl-target-readout" id="targetSplValue">115.0 дБ</span>
+                    </div>
+                    <input type="range" id="targetSplSlider" min="105" max="124" step="0.5" value="115.0">
+                    <div class="spl-scale-ticks">
+                        <span>105 дБ</span>
+                        <span>115 дБ (THX)</span>
+                        <span>120 дБ</span>
+                        <span>124 дБ</span>
+                    </div>
+                </div>
+
+                <div class="ach-status-summary">
+                    <div class="status-pill-row">
+                        <span class="status-badge capable" id="capableCountBadge">Дотягивают: — из 12</span>
+                        <span class="status-badge limited" id="limitedCountBadge">Уходят в пунктир: —</span>
+                    </div>
+                    <p class="legend-legend-hint" id="splDynamicHint">
+                        При повышении ползунка выше реального потолка конкретной модели её кривая останавливается в точке физического предела и продолжается пунктиром.
+                    </p>
+                </div>
+            </div>
+
+            <div class="model-toggles-header">
+                <span class="model-toggles-title">Отображение моделей на графике:</span>
+                <div class="bulk-actions">
+                    <button type="button" class="mini-action-btn" id="showAllModels">Включить все</button>
+                    <button type="button" class="mini-action-btn" id="hideAllModels">Скрыть все</button>
+                    <button type="button" class="mini-action-btn" id="onlyTopValue">Топ Цена/Качество</button>
+                </div>
+            </div>
+
+            <div class="model-toggles-grid" id="modelTogglesGrid"></div>
+
+            <div class="ach-canvas-wrap">
+                <canvas id="ceaAchChart"></canvas>
+            </div>
+
+            <div class="ach-legend-note">
+                <span class="legend-sample">
+                    <span class="solid-line-demo"></span>
+                    <span><strong>Сплошная линия</strong> — сабвуфер способен выдать заданный уровень SPL на этой частоте</span>
+                </span>
+                <span class="legend-sample">
+                    <span class="dash-line-demo"></span>
+                    <span><strong>Пунктирная линия</strong> — зона превышения возможностей модели (компрессия / клиппинг)</span>
+                </span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+         СВОДНАЯ ТАБЛИЦА
+         ========================================================================== -->
+    <section id="specs" class="section-alt">
+        <div class="section-header-grid reveal">
+            <div>
+                <span class="eyebrow">Спецификации и цены 2026</span>
+                <h2 class="section-title">Топ-12 сабвуферов <em>115+ дБ</em> в России</h2>
+            </div>
+            <p class="section-lead">
+                Кликайте по заголовкам колонок для сортировки. Значения SPL приведены по стандарту CEA-2010 (пиковое давление на 2 метрах). Цены — актуальная розница РФ.
+            </p>
+        </div>
+
+        <div class="table-controls reveal">
+            <div class="filter-pills" id="filterPills">
+                <button class="filter-btn active" data-filter="all">Все модели (12)</button>
+                <button class="filter-btn" data-filter="best-value">Топ Цена / Качество</button>
+                <button class="filter-btn" data-filter="ported">Фазоинвертор (ФИ)</button>
+                <button class="filter-btn" data-filter="sealed">Закрытый ящик (ЗЯ)</button>
+                <button class="filter-btn" data-filter="extreme">Экстрим 120+ дБ</button>
+            </div>
+
+            <div class="search-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="tableSearch" placeholder="Поиск по бренду или модели...">
+            </div>
+        </div>
+
+        <div class="table-wrapper reveal">
+            <table class="spec-table" id="subTable">
+                <thead>
+                    <tr>
+                        <th data-sort="name">Модель / Тип ↕</th>
+                        <th data-sort="freqLow">Частотный диапазон ↕</th>
+                        <th data-sort="spl">Макс. SPL ↕</th>
+                        <th data-sort="driver">Динамик ↕</th>
+                        <th data-sort="coil">Звуковая катушка ↕</th>
+                        <th data-sort="power">Мощность (RMS / Peak) ↕</th>
+                        <th data-sort="dims">Габариты и вес</th>
+                        <th data-sort="valueScore">Индекс Ц/К ↕</th>
+                        <th data-sort="price">Цена в РФ ↕</th>
+                    </tr>
+                </thead>
+                <tbody id="subTableBody"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+         CHARTS
+         ========================================================================== -->
+    <section id="analytics">
+        <div class="section-header-grid reveal">
+            <div>
+                <span class="eyebrow">Акустическая аналитика</span>
+                <h2 class="section-title">Кривые давления и <em>эффективность</em> бюджета</h2>
+            </div>
+            <p class="section-lead">
+                Сравнение реальной отдачи на инфразвуке (20 Гц) и мидбасе (40 Гц), а также матрица зависимости максимального SPL от стоимости в рублях.
+            </p>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card reveal">
+                <span class="bento-tag">Частотный профиль SPL (CEA-2010)</span>
+                <h3>Отдача на 20 Гц против 40 Гц (дБ)</h3>
+                <p style="font-size: 0.9rem; color: var(--text-secondary);">Ключевой тест для кинотеатра: насколько сильно падает давление на самом глубоком басе.</p>
+                <div class="chart-container">
+                    <canvas id="splFrequencyChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card reveal">
+                <span class="bento-tag">Матрица цена / давление</span>
+                <h3>Макс. SPL (дБ) vs Цена (тыс. ₽)</h3>
+                <p style="font-size: 0.9rem; color: var(--text-secondary);">Модели выше и левее тренда обладают наилучшим соотношением цена/качество.</p>
+                <div class="chart-container">
+                    <canvas id="valueScatterChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+         SMART CALCULATOR
+         ========================================================================== -->
+    <section id="calculator" class="section-alt">
+        <div class="section-header-grid reveal">
+            <div>
+                <span class="eyebrow">Интерактивный подбор</span>
+                <h2 class="section-title">Калькулятор <em>акустического</em> запаса помещения</h2>
+            </div>
+            <p class="section-lead">
+                Укажите площадь, высоту потолков, расстояние до места прослушивания и бюджет. Алгоритм учтёт рум-гейн и спад давления с дистанцией, после чего подберёт оптимальные модели из каталога РФ.
+            </p>
+        </div>
+
+        <div class="calculator-grid reveal">
+            <div>
+                <div class="control-group">
+                    <div class="control-header">
+                        <span class="control-label">Площадь помещения</span>
+                        <span class="control-value-pill" id="areaVal">28 м²</span>
+                    </div>
+                    <input type="range" id="roomArea" min="14" max="80" value="28" step="1">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span class="control-label">Высота потолков</span>
+                        <span class="control-value-pill" id="heightVal">2.8 м</span>
+                    </div>
+                    <input type="range" id="roomHeight" min="2.4" max="4.5" value="2.8" step="0.1">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span class="control-label">Расстояние до места прослушивания</span>
+                        <span class="control-value-pill" id="distanceVal">3.5 м</span>
+                    </div>
+                    <input type="range" id="roomDistance" min="1.5" max="8" value="3.5" step="0.1">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-header">
+                        <span class="control-label">Бюджет на сабвуфер</span>
+                        <span class="control-value-pill" id="budgetVal">180 000 ₽</span>
+                    </div>
+                    <input type="range" id="userBudget" min="90000" max="450000" value="180000" step="10000">
+                </div>
+
+                <div class="control-group" style="margin-bottom: 0;">
+                    <div class="control-header">
+                        <span class="control-label">Сценарий использования</span>
+                    </div>
+                    <div class="segmented-control" id="usageSelector">
+                        <button class="segment-btn" data-mode="music">Музыка + Кино</button>
+                        <button class="segment-btn active" data-mode="cinema">Кинотеатр (115 дБ)</button>
+                        <button class="segment-btn" data-mode="extreme">Инфразвук 120+ дБ</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="calc-output-panel">
+                <div>
+                    <div class="calc-metrics-row">
+                        <div class="calc-stat-box">
+                            <span>Объём комнаты</span>
+                            <strong id="outVolume">78.4 м³</strong>
+                        </div>
+                        <div class="calc-stat-box">
+                            <span>Расстояние до слушателя</span>
+                            <strong id="outDistance">3.5 м</strong>
+                        </div>
+                    </div>
+
+                    <div class="calc-stat-box" style="margin-bottom: 1.75rem;">
+                        <span>Требуемый SPL сабвуфера (паспортные 2 м)</span>
+                        <strong id="outReqSpl" class="accent-blue">119.6 дБ</strong>
+                        <small id="distInfo" style="display:block; font-size:0.72rem; color:var(--text-muted); margin-top:0.3rem;">Поправка на дистанцию: +4.0 дБ</small>
+                    </div>
+
+                    <div style="margin-bottom: 1rem; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);">
+                        Рекомендованные модели:
+                    </div>
+
+                    <div class="recommended-cards" id="recList"></div>
+                </div>
+
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 1.5rem;">
+                    * Расчёт учитывает передаточную функцию жилого помещения (+4…+7 дБ на 25 Гц), спад давления с дистанцией (≈5 дБ на каждое удвоение расстояния от 2 м) и запас 3 дБ против компрессии.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ==========================================================================
+         TIMELINE
+         ========================================================================== -->
+    <section id="calibration">
+        <div class="section-header-grid reveal">
+            <div>
+                <span class="eyebrow">Чек-лист инженера</span>
+                <h2 class="section-title">Как раскрыть <em>100% потенциала</em> мощного сабвуфера</h2>
+            </div>
+            <p class="section-lead">
+                Даже флагманский 15-дюймовый драйвер потеряет до 10 дБ отдачи при неправильной фазировке с фронтальной акустикой или неудачном размещении.
+            </p>
+        </div>
+
+        <div class="editorial-timeline">
+            <div class="timeline-step reveal">
+                <div class="timeline-node">01</div>
+                <div class="timeline-card">
+                    <h4>Угловое размещение и контроль комнатных мод</h4>
+                    <p>Установка в угол комнаты дает бесплатный прирост звукового давления до <strong>+6 дБ</strong> по всему диапазону, экономя ресурс усилителя. Возникающие при этом стоячие волны (пики на 35–48 Гц) подавляются встроенным параметрическим эквалайзером (PEQ) сабвуфера с добротностью Q = 4…8.</p>
+                </div>
+            </div>
+
+            <div class="timeline-step reveal">
+                <div class="timeline-node">02</div>
+                <div class="timeline-card">
+                    <h4>Частота среза (Crossover) и режим LFE</h4>
+                    <p>Переведите регулятор LPF на сабвуфере в крайнее положение <strong>LFE / Bypass</strong>, а фильтрацию доверьте AV-ресиверу или процессору. Оптимальный срез для напольной акустики в кинотеатре — <strong>80 Гц</strong> (стандарт THX).</p>
+                </div>
+            </div>
+
+            <div class="timeline-step reveal">
+                <div class="timeline-node">03</div>
+                <div class="timeline-card">
+                    <h4>Согласование фазы и задержки (Distance / Delay)</h4>
+                    <p>DSP-модули современных сабвуферов вносят собственную задержку сигнала 3–8 мс. В настройках ресивера дистанция до сабвуфера всегда должна быть на <strong>0.8 — 1.8 метра больше</strong> реальной рулеточной длины для идеального сложения волн в зоне кроссовера.</p>
+                </div>
+            </div>
+
+            <div class="timeline-step reveal">
+                <div class="timeline-node">04</div>
+                <div class="timeline-card">
+                    <h4>Виброразвязка корпуса от перекрытий</h4>
+                    <p>Сабвуферы массой 35–60 кг передают структурный гул в пол. Использование эластомерных ножек (например, SVS SoundPath) устраняет паразитные призвуки мебели и повышает субъективную артикуляцию мидбаса.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div>
+            <strong>ACOUSTIC LAB // 2026</strong> — Независимый инженерный обзор систем низкочастотного воспроизведения для рынка РФ.
+        </div>
+        <div>
+            Стандарты измерений: CEA-2010-A / B • Цены актуальны на 2026 год.
+        </div>
+    </footer>
+
+    <!-- ==========================================================================
+         JAVASCRIPT: MERGED DATA + ALL INTERACTIVITY
+         ========================================================================== -->
+    <script>
+        /* ==========================================================================
+           1. UNIFIED DATASET (12 SUBWOOFERS, RF 2026)
+           ========================================================================== */
+        const freqPoints = [15, 20, 25, 31.5, 40, 50, 63, 80, 100, 120];
+
+        const subwoofers = [
+            {
+                id: 'tw-d4000',
+                name: 'Tone Winner SW-D4000',
+                type: 'ФИ (щелевой порт) + DSP App',
+                color: '#2563EB',
+                category: ['best-value', 'ported'],
+                freqRange: '16 – 240 Гц',
+                freqLow: 16,
+                spl: 117.5,
+                spl20: 106.5,
+                spl40: 117.5,
+                driver: '12" (305 мм) длинноходный',
+                driverInch: 12,
+                coil: '3.0" (76 мм)',
+                coilInch: 3.0,
+                power: '800 Вт RMS / 2400 Вт Peak',
+                powerRms: 800,
+                dims: '480 × 380 × 520 мм • 28.5 кг',
+                valueScore: 98,
+                price: 94000,
+                badge: 'Хит Цена/Качество',
+                curve: [102.0, 106.5, 110.5, 114.0, 117.5, 117.2, 116.5, 115.8, 115.0, 114.2]
+            },
+            {
+                id: 'tw-d6000',
+                name: 'Tone Winner SW-D6000',
+                type: 'ФИ (двойной порт) + DSP App',
+                color: '#FF7162',
+                category: ['best-value', 'ported', 'extreme'],
+                freqRange: '15 – 220 Гц',
+                freqLow: 15,
+                spl: 121.0,
+                spl20: 111.5,
+                spl40: 121.0,
+                driver: '15" (380 мм) композит',
+                driverInch: 15,
+                coil: '3.5" (89 мм)',
+                coilInch: 3.5,
+                power: '1000 Вт RMS / 3000 Вт Peak',
+                powerRms: 1000,
+                dims: '560 × 450 × 580 мм • 39.0 кг',
+                valueScore: 99,
+                price: 129000,
+                badge: 'Абсолютный лидер Ц/К',
+                curve: [106.5, 111.5, 115.5, 118.8, 121.0, 120.8, 120.0, 119.2, 118.5, 117.8]
+            },
+            {
+                id: 'klipsch-rp1200',
+                name: 'Klipsch RP-1200SW',
+                type: 'ФИ (фронтальный щелевой)',
+                color: '#10B981',
+                category: ['best-value', 'ported'],
+                freqRange: '16.5 – 138 Гц (±3 дБ)',
+                freqLow: 16.5,
+                spl: 118.0,
+                spl20: 107.0,
+                spl40: 118.0,
+                driver: '12" (305 мм) Cerametallic',
+                driverInch: 12,
+                coil: '3.0" (76 мм)',
+                coilInch: 3.0,
+                power: '400 Вт RMS / 800 Вт Peak',
+                powerRms: 400,
+                dims: '480 × 432 × 658 мм • 31.1 кг',
+                valueScore: 91,
+                price: 138000,
+                badge: 'Мощный удар 30–60 Гц',
+                curve: [101.5, 107.0, 111.5, 115.2, 118.0, 117.8, 117.0, 116.0, 114.5, 112.5]
+            },
+            {
+                id: 'starke-sw15',
+                name: 'Starke Sound SW15',
+                type: 'Закрытый ящик (ЗЯ)',
+                color: '#8B5CF6',
+                category: ['best-value', 'sealed'],
+                freqRange: '18 – 240 Гц',
+                freqLow: 18,
+                spl: 116.5,
+                spl20: 103.5,
+                spl40: 116.5,
+                driver: '15" (380 мм) углеволокно',
+                driverInch: 15,
+                coil: '3.0" (76 мм)',
+                coilInch: 3.0,
+                power: '600 Вт RMS / 1200 Вт Peak',
+                powerRms: 600,
+                dims: '465 × 450 × 475 мм • 27.0 кг',
+                valueScore: 92,
+                price: 135000,
+                badge: 'Компактный 15" ЗЯ',
+                curve: [98.5, 103.5, 108.0, 112.5, 116.5, 116.4, 116.0, 115.5, 115.0, 114.5]
+            },
+            {
+                id: 'svs-pb1000pro',
+                name: 'SVS PB-1000 Pro',
+                type: 'ФИ (двойной порт) + DSP App',
+                color: '#F59E0B',
+                category: ['best-value', 'ported'],
+                freqRange: '17 – 260 Гц (±3 дБ)',
+                freqLow: 17,
+                spl: 116.0,
+                spl20: 105.5,
+                spl40: 116.0,
+                driver: '12" (305 мм) High-Excursion',
+                driverInch: 12,
+                coil: '2.5" (64 мм)',
+                coilInch: 2.5,
+                power: '325 Вт RMS / 820 Вт Peak',
+                powerRms: 325,
+                dims: '479 × 380 × 509 мм • 19.3 кг',
+                valueScore: 89,
+                price: 132000,
+                badge: 'Эталонный софт DSP',
+                curve: [100.5, 105.5, 109.5, 113.0, 116.0, 115.8, 115.2, 114.5, 113.8, 113.0]
+            },
+            {
+                id: 'klipsch-rp1400',
+                name: 'Klipsch RP-1400SW',
+                type: 'ФИ (фронтальный щелевой)',
+                color: '#EC4899',
+                category: ['best-value', 'ported', 'extreme'],
+                freqRange: '16 – 141 Гц (±3 дБ)',
+                freqLow: 16,
+                spl: 120.5,
+                spl20: 109.5,
+                spl40: 120.5,
+                driver: '14" (355 мм) Cerametallic',
+                driverInch: 14,
+                coil: '3.5" (89 мм)',
+                coilInch: 3.5,
+                power: '500 Вт RMS / 1000 Вт Peak',
+                powerRms: 500,
+                dims: '542 × 508 × 652 мм • 38.0 кг',
+                valueScore: 94,
+                price: 175000,
+                badge: 'Бестселлер для кино',
+                curve: [104.5, 109.5, 114.0, 117.8, 120.5, 120.2, 119.5, 118.2, 116.5, 114.0]
+            },
+            {
+                id: 'tw-d8000',
+                name: 'Tone Winner SW-D8000',
+                type: 'ФИ (тройной порт) + DSP App',
+                color: '#06B6D4',
+                category: ['ported', 'extreme'],
+                freqRange: '14 – 200 Гц',
+                freqLow: 14,
+                spl: 123.5,
+                spl20: 114.5,
+                spl40: 123.5,
+                driver: '15" (380 мм) усиленный диффузор',
+                driverInch: 15,
+                coil: '4.0" (102 мм)',
+                coilInch: 4.0,
+                power: '1500 Вт RMS / 4500 Вт Peak',
+                powerRms: 1500,
+                dims: '630 × 500 × 640 мм • 54.0 кг',
+                valueScore: 95,
+                price: 189000,
+                badge: 'Инфразвуковой монстр',
+                curve: [110.5, 114.5, 118.5, 121.5, 123.5, 123.2, 122.6, 121.8, 121.0, 120.2]
+            },
+            {
+                id: 'svs-pb2000pro',
+                name: 'SVS PB-2000 Pro',
+                type: 'ФИ (двойной порт) + DSP App',
+                color: '#84CC16',
+                category: ['ported'],
+                freqRange: '16 – 290 Гц (±3 дБ)',
+                freqLow: 16,
+                spl: 118.5,
+                spl20: 108.5,
+                spl40: 118.5,
+                driver: '12" (305 мм) двойной магнит',
+                driverInch: 12,
+                coil: '2.5" (64 мм) двухслойная',
+                coilInch: 2.5,
+                power: '550 Вт RMS / 1500 Вт Peak',
+                powerRms: 550,
+                dims: '532 × 440 × 600 мм • 29.4 кг',
+                valueScore: 86,
+                price: 198000,
+                badge: 'Сбалансированный референс',
+                curve: [103.5, 108.5, 112.5, 116.0, 118.5, 118.2, 117.5, 116.8, 116.0, 115.2]
+            },
+            {
+                id: 'svs-sb3000',
+                name: 'SVS SB-3000',
+                type: 'Закрытый ящик (ЗЯ) + DSP App',
+                color: '#F97316',
+                category: ['sealed'],
+                freqRange: '18 – 270 Гц (±3 дБ)',
+                freqLow: 18,
+                spl: 116.0,
+                spl20: 102.5,
+                spl40: 116.0,
+                driver: '13" (330 мм) алюминиевый конус',
+                driverInch: 13,
+                coil: '2.5" (64 мм) плоский провод',
+                coilInch: 2.5,
+                power: '800 Вт RMS / 2500 Вт Peak',
+                powerRms: 800,
+                dims: '397 × 385 × 451 мм • 24.7 кг',
+                valueScore: 84,
+                price: 215000,
+                badge: 'Ультра-компактный ЗЯ',
+                curve: [97.5, 102.5, 107.2, 112.0, 116.0, 116.0, 115.8, 115.4, 115.0, 114.6]
+            },
+            {
+                id: 'klipsch-rp1600',
+                name: 'Klipsch RP-1600SW',
+                type: 'ФИ (фронтальный щелевой)',
+                color: '#E11D48',
+                category: ['ported', 'extreme'],
+                freqRange: '14.5 – 175 Гц (±3 дБ)',
+                freqLow: 14.5,
+                spl: 123.0,
+                spl20: 113.5,
+                spl40: 123.0,
+                driver: '16" (406 мм) Cerametallic',
+                driverInch: 16,
+                coil: '4.0" (102 мм)',
+                coilInch: 4.0,
+                power: '800 Вт RMS / 1600 Вт Peak',
+                powerRms: 800,
+                dims: '594 × 597 × 695 мм • 50.3 кг',
+                valueScore: 88,
+                price: 245000,
+                badge: 'Калибр 16 дюймов',
+                curve: [109.0, 113.5, 117.5, 120.8, 123.0, 122.8, 122.0, 121.0, 119.8, 118.2]
+            },
+            {
+                id: 'arendal-1723-1v',
+                name: 'Arendal 1723 Subwoofer 1V',
+                type: 'ФИ (боковой щелевой) + HDF',
+                color: '#6366F1',
+                category: ['ported'],
+                freqRange: '17 – 200 Гц',
+                freqLow: 17,
+                spl: 119.0,
+                spl20: 109.0,
+                spl40: 119.0,
+                driver: '13.8" (350 мм) длинноходный',
+                driverInch: 13.8,
+                coil: '3.0" (76 мм)',
+                coilInch: 3.0,
+                power: '800 Вт RMS / 1200 Вт Peak',
+                powerRms: 800,
+                dims: '550 × 425 × 550 мм • 37.9 кг',
+                valueScore: 83,
+                price: 279000,
+                badge: 'Сборка HDF / THX Ultra',
+                curve: [104.0, 109.0, 113.2, 116.6, 119.0, 118.8, 118.2, 117.5, 116.8, 116.0]
+            },
+            {
+                id: 'svs-pb3000',
+                name: 'SVS PB-3000',
+                type: 'ФИ (двойной порт) + DSP App',
+                color: '#14B8A6',
+                category: ['ported', 'extreme'],
+                freqRange: '16 – 260 Гц (±3 дБ)',
+                freqLow: 16,
+                spl: 121.5,
+                spl20: 112.0,
+                spl40: 121.5,
+                driver: '13" (330 мм) двойной магнит',
+                driverInch: 13,
+                coil: '3.0" (76 мм)',
+                coilInch: 3.0,
+                power: '800 Вт RMS / 2500 Вт Peak',
+                powerRms: 800,
+                dims: '557 × 465 × 660 мм • 37.3 кг',
+                valueScore: 82,
+                price: 295000,
+                badge: 'Референс индустрии',
+                curve: [107.2, 112.0, 116.2, 119.4, 121.5, 121.2, 120.5, 119.8, 119.0, 118.2]
+            }
+        ];
+
+        /* ==========================================================================
+           2. HELPERS
+           ========================================================================== */
+        function formatPrice(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' ₽';
+        }
+
+        /* ==========================================================================
+           3. TABLE: RENDER, FILTER, SORT, SEARCH
+           ========================================================================== */
+        let currentFilter = 'all';
+        let searchQuery = '';
+        let sortKey = 'valueScore';
+        let sortAsc = false;
+
+        const tableBody = document.getElementById('subTableBody');
+
+        function renderTable() {
+            let filtered = subwoofers.filter(item => {
+                const matchesCat = currentFilter === 'all' || item.category.includes(currentFilter);
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                      item.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                      item.driver.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesCat && matchesSearch;
+            });
+
+            filtered.sort((a, b) => {
+                let valA = a[sortKey];
+                let valB = b[sortKey];
+                if (typeof valA === 'string') {
+                    return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                }
+                return sortAsc ? valA - valB : valB - valA;
+            });
+
+            tableBody.innerHTML = filtered.map(sub => `
+                <tr>
+                    <td>
+                        <div class="model-cell">
+                            <span class="model-name">
+                                <span class="dot-inline" style="background: ${sub.color}; box-shadow: 0 0 6px ${sub.color};"></span>
+                                ${sub.name}
+                            </span>
+                            <span class="model-type">${sub.type} • <strong style="color:var(--accent-blue)">${sub.badge}</strong></span>
+                        </div>
+                    </td>
+                    <td><strong>${sub.freqRange}</strong></td>
+                    <td>
+                        <span class="spl-badge ${sub.spl >= 120 ? 'spl-extreme' : ''}">
+                            ${sub.spl.toFixed(1)} дБ
+                        </span>
+                    </td>
+                    <td>${sub.driver}</td>
+                    <td><strong>${sub.coil}</strong></td>
+                    <td>${sub.power}</td>
+                    <td style="font-size:0.84rem; color:var(--text-secondary)">${sub.dims}</td>
+                    <td>
+                        <div class="value-bar-wrap">
+                            <div class="value-bar"><div class="value-fill" style="width: ${sub.valueScore}%"></div></div>
+                            <strong>${sub.valueScore}/100</strong>
+                        </div>
+                    </td>
+                    <td class="price-tag">${formatPrice(sub.price)}</td>
+                </tr>
+            `).join('');
+        }
+
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+                renderTable();
+            });
+        });
+
+        document.getElementById('tableSearch').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            renderTable();
+        });
+
+        document.querySelectorAll('.spec-table th[data-sort]').forEach(th => {
+            th.addEventListener('click', () => {
+                const key = th.dataset.sort;
+                if (sortKey === key) {
+                    sortAsc = !sortAsc;
+                } else {
+                    sortKey = key;
+                    sortAsc = key === 'price' || key === 'freqLow' || key === 'name';
+                }
+                renderTable();
+            });
+        });
+
+        renderTable();
+
+        /* ==========================================================================
+           4. SMART ROOM SPL CALCULATOR (с учётом расстояния до слушателя)
+           ========================================================================== */
+        const areaSlider     = document.getElementById('roomArea');
+        const heightSlider   = document.getElementById('roomHeight');
+        const distanceSlider = document.getElementById('roomDistance');
+        const budgetSlider   = document.getElementById('userBudget');
+        const usageBtns      = document.querySelectorAll('.segment-btn');
+
+        let usageMode = 'cinema';
+
+        function updateCalculator() {
+            const area     = parseFloat(areaSlider.value);
+            const height   = parseFloat(heightSlider.value);
+            const distance = parseFloat(distanceSlider.value);
+            const budget   = parseInt(budgetSlider.value, 10);
+
+            // ── Отображение текущих значений слайдеров ──
+            document.getElementById('areaVal').textContent    = `${area} м²`;
+            document.getElementById('heightVal').textContent  = `${height.toFixed(1)} м`;
+            document.getElementById('distanceVal').textContent = `${distance.toFixed(1)} м`;
+            document.getElementById('budgetVal').textContent  = formatPrice(budget);
+
+            // ── Объём ──
+            const volume = area * height;
+            document.getElementById('outVolume').textContent   = `${volume.toFixed(1)} м³`;
+            document.getElementById('outDistance').textContent = `${distance.toFixed(1)} м`;
+
+            // ── Базовый целевой уровень у слушателя ──
+            let baseTarget = 115.0;                    // THX Reference
+            if (usageMode === 'music')   baseTarget = 112.5;
+            if (usageMode === 'extreme') baseTarget = 118.5;
+
+            // ── Поправка на объём помещения (рум-гейн) ──
+            const volumeCorrection = Math.max(-1.5, (volume - 65) * 0.045);
+
+            // ── Поправка на расстояние (паспортный SPL снят на 2 м) ──
+            // В реальных помещениях спад ≈5 дБ на каждое удвоение расстояния.
+            // Ограничиваем диапазон: не более −3 дБ (близко) и +10 дБ (далеко).
+            const distanceCorrection = Math.max(
+                -3,
+                Math.min(10, 5 * Math.log2(distance / 2))
+            );
+
+            // ── Итоговый требуемый паспортный SPL (на 2 м) ──
+            const requiredSpl = Math.min(
+                124,
+                Math.max(112, baseTarget + volumeCorrection + distanceCorrection)
+            );
+
+            document.getElementById('outReqSpl').textContent  = `${requiredSpl.toFixed(1)} дБ`;
+            document.getElementById('distInfo').textContent   =
+                `Поправка на дистанцию: ${distanceCorrection >= 0 ? '+' : ''}${distanceCorrection.toFixed(1)} дБ`;
+
+            // ── Подбор моделей: бюджет + достаточный SPL ──
+            let matches = subwoofers.filter(
+                s => s.price <= budget + 15000 && s.spl >= requiredSpl - 0.5
+            );
+
+            if (usageMode === 'music') {
+                matches.sort((a, b) =>
+                    (b.category.includes('sealed') ? 1 : 0) - (a.category.includes('sealed') ? 1 : 0)
+                    || b.valueScore - a.valueScore
+                );
+            } else {
+                matches.sort((a, b) => b.valueScore - a.valueScore);
+            }
+
+            // Fallback: если в бюджете нет подходящих — показать самые мощные в бюджете
+            if (matches.length === 0) {
+                matches = [...subwoofers]
+                    .filter(s => s.price <= budget + 25000)
+                    .sort((a, b) => b.spl - a.spl);
+            }
+
+            const top3 = matches.slice(0, 3);
+            const recList = document.getElementById('recList');
+
+            recList.innerHTML = top3.length ? top3.map(sub => `
+                <div class="rec-item">
+                    <div>
+                        <strong style="font-size:0.98rem; display:block;">${sub.name}</strong>
+                        <span style="font-size:0.8rem; color:var(--text-muted);">
+                            ${sub.driver} • Катушка ${sub.coil} • ${sub.spl} дБ @2м
+                        </span>
+                    </div>
+                    <div style="text-align:right;">
+                        <strong style="color:var(--accent-blue); display:block;">${formatPrice(sub.price)}</strong>
+                        <span style="font-size:0.75rem; color:var(--accent-mint);">Индекс Ц/К: ${sub.valueScore}/100</span>
+                    </div>
+                </div>
+            `).join('') : `
+                <p style="font-size:0.9rem; color:var(--text-muted); padding:1rem 0;">
+                    В заданном бюджете нет моделей с достаточным SPL. Увеличьте бюджет или уменьшите дистанцию.
+                </p>`;
+        }
+
+        areaSlider.addEventListener('input', updateCalculator);
+        heightSlider.addEventListener('input', updateCalculator);
+        distanceSlider.addEventListener('input', updateCalculator);
+        budgetSlider.addEventListener('input', updateCalculator);
+
+        usageBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                usageBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                usageMode = btn.dataset.mode;
+                updateCalculator();
+            });
+        });
+
+        updateCalculator();
+
+        /* ==========================================================================
+           5. CHART.JS: BAR + SCATTER
+           ========================================================================== */
+        let splChartInstance = null;
+        let scatterChartInstance = null;
+
+        function initCharts() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#9CA3AF' : '#4B5563';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
+            const primaryAccent = isDark ? '#00F0FF' : '#2563EB';
+            const secondaryAccent = isDark ? '#FF4D6D' : '#FF7162';
+
+            if (splChartInstance) splChartInstance.destroy();
+            if (scatterChartInstance) scatterChartInstance.destroy();
+
+            const topModels = [
+                subwoofers[0], subwoofers[1], subwoofers[2], subwoofers[5],
+                subwoofers[6], subwoofers[7], subwoofers[9], subwoofers[11]
+            ];
+
+            const ctx1 = document.getElementById('splFrequencyChart').getContext('2d');
+            splChartInstance = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: topModels.map(m => m.name.replace('Tone Winner ', 'TW ')),
+                    datasets: [
+                        {
+                            label: 'Пик 40 Гц (дБ)',
+                            data: topModels.map(m => m.spl40),
+                            backgroundColor: primaryAccent,
+                            borderRadius: 8,
+                            barPercentage: 0.65
+                        },
+                        {
+                            label: 'Инфразвук 20 Гц (дБ)',
+                            data: topModels.map(m => m.spl20),
+                            backgroundColor: secondaryAccent,
+                            borderRadius: 8,
+                            barPercentage: 0.65
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: textColor, font: { family: 'Inter', weight: '600' } } }
+                    },
+                    scales: {
+                        y: { min: 95, max: 126, grid: { color: gridColor }, ticks: { color: textColor } },
+                        x: { grid: { display: false }, ticks: { color: textColor, font: { size: 11 } } }
+                    }
+                }
+            });
+
+            const ctx2 = document.getElementById('valueScatterChart').getContext('2d');
+            scatterChartInstance = new Chart(ctx2, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Модели сабвуферов РФ 2026',
+                        data: subwoofers.map(s => ({
+                            x: Math.round(s.price / 1000),
+                            y: s.spl,
+                            modelName: s.name
+                        })),
+                        backgroundColor: isDark ? '#00F5D4' : '#10B981',
+                        borderColor: primaryAccent,
+                        borderWidth: 2,
+                        pointRadius: 8,
+                        pointHoverRadius: 11
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const pt = ctx.raw;
+                                    return `${pt.modelName}: ${pt.y} дБ за ${pt.x} тыс. ₽`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Цена в РФ (тыс. ₽)', color: textColor },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor }
+                        },
+                        y: {
+                            title: { display: true, text: 'Макс. SPL (дБ)', color: textColor },
+                            min: 115, max: 125,
+                            grid: { color: gridColor },
+                            ticks: { color: textColor }
+                        }
+                    }
+                }
+            });
+        }
+
+        initCharts();
+
+        /* ==========================================================================
+           6. INTERACTIVE АЧХ SPL (CEA-2010) — исправленная версия без дёрганья
+           ========================================================================== */
+        let targetSpl = 115.0;
+        const visibleModels = new Set(subwoofers.map(s => s.id));
+        let achChartInstance = null;
+
+        const splSlider = document.getElementById('targetSplSlider');
+        const targetSplValueEl = document.getElementById('targetSplValue');
+        const capableBadge = document.getElementById('capableCountBadge');
+        const limitedBadge = document.getElementById('limitedCountBadge');
+        const togglesGrid = document.getElementById('modelTogglesGrid');
+
+        function buildAchDatasets() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const targetColor = isDark ? '#FF4D6D' : '#FF7162';
+
+            const datasets = subwoofers.map(sub => ({
+                label: sub.name,
+                data: sub.curve,
+                borderColor: sub.color,
+                backgroundColor: sub.color + '18',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                pointBackgroundColor: sub.color,
+                pointBorderColor: sub.color,
+                tension: 0.3,
+                hidden: !visibleModels.has(sub.id),
+                segment: {
+                    // читает актуальный targetSpl из замыкания при каждом рендере
+                    borderDash: ctx => {
+                        const p0y = ctx.p0.parsed.y;
+                        const p1y = ctx.p1.parsed.y;
+                        return (p0y < targetSpl || p1y < targetSpl) ? [7, 5] : undefined;
+                    }
+                }
+            }));
+
+            datasets.push({
+                label: 'Целевой SPL',
+                data: freqPoints.map(() => targetSpl),
+                borderColor: targetColor,
+                borderWidth: 2,
+                borderDash: [4, 4],
+                pointRadius: 0,
+                fill: false,
+                tension: 0,
+                isTarget: true
+            });
+
+            return datasets;
+        }
+
+        function initAchChart() {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const textColor = isDark ? '#9CA3AF' : '#4B5563';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
+
+            if (achChartInstance) achChartInstance.destroy();
+
+            const ctx = document.getElementById('ceaAchChart').getContext('2d');
+            achChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: freqPoints.map(f => f + ''),
+                    datasets: buildAchDatasets()
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    // Базовая анимация для первичной отрисовки и смены темы
+                    animation: { duration: 350 },
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: (items) => items[0].label + ' Гц',
+                                label: function(context) {
+                                    if (context.dataset.isTarget) {
+                                        return 'Целевой SPL: ' + context.parsed.y.toFixed(1) + ' дБ';
+                                    }
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + ' дБ';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'SPL (дБ)', color: textColor },
+                            min: 90, max: 128,
+                            grid: { color: gridColor },
+                            ticks: { color: textColor }
+                        },
+                        x: {
+                            title: { display: true, text: 'Частота (Гц)', color: textColor },
+                            grid: { color: gridColor },
+                            ticks: { color: textColor }
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Лёгкое обновление графика.
+         * @param {boolean} animate — false во время перетаскивания (update('none'))
+         *
+         * ВАЖНО: при animate=false НЕ пересобираем все датасеты,
+         * а лишь подменяем данные целевой линии — Chart.js перерисует
+         * сегменты borderDash по актуальному targetSpl.
+         */
+        function refreshAchChart(animate = true) {
+            if (!achChartInstance) return;
+            const targetDataset = achChartInstance.data.datasets.find(d => d.isTarget);
+            if (targetDataset) {
+                targetDataset.data = freqPoints.map(() => targetSpl);
+            }
+            achChartInstance.update(animate ? undefined : 'none');
+        }
+
+        /** Полная пересборка датасетов (нужна при смене темы / видимости моделей) */
+        function rebuildAchChart() {
+            if (!achChartInstance) return;
+            achChartInstance.data.datasets = buildAchDatasets();
+            achChartInstance.update();
+        }
+
+        function updateChipTags() {
+            document.querySelectorAll('.model-chip').forEach(chip => {
+                const id = chip.dataset.id;
+                const sub = subwoofers.find(s => s.id === id);
+                const peak = Math.max(...sub.curve);
+                const tag = chip.querySelector('.chip-limit-tag');
+                if (peak >= targetSpl) {
+                    tag.className = 'chip-limit-tag ok';
+                    tag.textContent = '+';
+                } else {
+                    tag.className = 'chip-limit-tag capped';
+                    tag.textContent = '−';
+                }
+            });
+        }
+
+        function updateCapabilityBadges() {
+            const capable = subwoofers.filter(s => Math.max(...s.curve) >= targetSpl).length;
+            const limited = subwoofers.length - capable;
+            capableBadge.textContent = `Дотягивают: ${capable} из ${subwoofers.length}`;
+            limitedBadge.textContent = `Уходят в пунктир: ${limited}`;
+        }
+
+        function buildToggles() {
+            togglesGrid.innerHTML = subwoofers.map(sub => `
+                <button type="button" class="model-chip ${visibleModels.has(sub.id) ? '' : 'off'}" data-id="${sub.id}">
+                    <span class="model-chip-left">
+                        <span class="color-swatch" style="background:${sub.color}; color:${sub.color};"></span>
+                        <span class="model-chip-name">${sub.name}</span>
+                    </span>
+                    <span class="chip-limit-tag ok">+</span>
+                </button>
+            `).join('');
+            updateChipTags();
+        }
+
+        /* ---- Ползунок: лёгкий input + тяжёлый change ---- */
+
+        splSlider.addEventListener('input', (e) => {
+            targetSpl = parseFloat(e.target.value);
+            targetSplValueEl.textContent = `${targetSpl.toFixed(1)} дБ`;
+            // Только график, без анимации, без DOM-перестроек
+            refreshAchChart(false);
+        });
+
+        splSlider.addEventListener('change', () => {
+            // Один раз по отпусканию ползунка:
+            updateCapabilityBadges();
+            updateChipTags();
+        });
+
+        /* ---- Переключатели моделей ---- */
+
+        togglesGrid.addEventListener('click', (e) => {
+            const chip = e.target.closest('.model-chip');
+            if (!chip) return;
+            const id = chip.dataset.id;
+            if (visibleModels.has(id)) {
+                visibleModels.delete(id);
+                chip.classList.add('off');
+            } else {
+                visibleModels.add(id);
+                chip.classList.remove('off');
+            }
+            rebuildAchChart();
+        });
+
+        document.getElementById('showAllModels').addEventListener('click', () => {
+            subwoofers.forEach(s => visibleModels.add(s.id));
+            document.querySelectorAll('.model-chip').forEach(c => c.classList.remove('off'));
+            rebuildAchChart();
+        });
+
+        document.getElementById('hideAllModels').addEventListener('click', () => {
+            visibleModels.clear();
+            document.querySelectorAll('.model-chip').forEach(c => c.classList.add('off'));
+            rebuildAchChart();
+        });
+
+        document.getElementById('onlyTopValue').addEventListener('click', () => {
+            visibleModels.clear();
+            subwoofers
+                .filter(s => s.valueScore >= 94)
+                .forEach(s => visibleModels.add(s.id));
+            document.querySelectorAll('.model-chip').forEach(c => {
+                if (visibleModels.has(c.dataset.id)) c.classList.remove('off');
+                else c.classList.add('off');
+            });
+            rebuildAchChart();
+        });
+
+        /* ---- Инициализация ---- */
+        buildToggles();
+        updateCapabilityBadges();
+        initAchChart();
+
+        /* ==========================================================================
+           7. THEME SWITCHER
+           ========================================================================== */
+        const themeToggle = document.getElementById('themeToggle');
+        const themeLabel = document.getElementById('themeLabel');
+        const themeIcon = document.getElementById('themeIcon');
+
+        themeToggle.addEventListener('click', () => {
+            const htmlEl = document.documentElement;
+            const currentTheme = htmlEl.getAttribute('data-theme');
+            const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+            htmlEl.setAttribute('data-theme', nextTheme);
+
+            if (nextTheme === 'dark') {
+                themeLabel.textContent = 'Light Mode';
+                themeIcon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+            } else {
+                themeLabel.textContent = 'Dark Mode';
+                themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+            }
+
+            rebuildAchChart();
+            initAchChart();
+        });
+
+        /* ==========================================================================
+           8. SCROLL REVEAL
+           ========================================================================== */
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) entry.target.classList.add('visible');
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    </script>
+</body>
+</html>
