@@ -1619,7 +1619,155 @@
                             </div>
                         </div>
                     </div>
+                    <!-- МОДУЛЬ 5: ROOM SIMULATOR 3D -->
+                    <div class="module-section" id="roomsim-guide">
+                        <h3 class="module-title">5. ROOM SIMULATOR 3D</h3>
+                        <p class="module-desc">
+                            Интерактивный симулятор комнатной акустики и модовых резонансов — расчёт на базе волнового уравнения
+                            с жёсткими границами и потерями в стенах (до 20 мод по каждой оси), визуализация на Three.js + Canvas.
+                            Всё состояние и пресеты автоматически сохраняются в localStorage браузера.
+                        </p>
 
+                        <div class="premium-grid">
+
+                            <!-- Карта 1: Устройство интерфейса -->
+                            <div class="premium-card card-cyan">
+                                <h4>🧭 Устройство интерфейса</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Левая панель (Room):</strong> геометрия, поглощение поверхностей и виды помещения (3D, план, разрез).</li>
+                                    <li><strong>Разделитель по центру:</strong> перетаскивайте за полосу, чтобы менять пропорции; кнопки ◀ и ▶ сворачивают панели.</li>
+                                    <li><strong>Правая панель (Response):</strong> график АЧХ (SPL dB × Гц), легенда, шкала SPL, пресеты, опорная кривая (Ref) и нижний блок вкладок + генератор измерений.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 2: Настройка помещения -->
+                            <div class="premium-card card-lime">
+                                <h4>🏠 Настройка помещения (левая панель)</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Свернуть блок:</strong> кнопка ﹀ / ︿ в заголовке Room.</li>
+                                    <li><strong>L / W / H:</strong> длина, ширина, высота (1–60 м или ft). Координаты источников и слушателя при изменении размеров масштабируются пропорционально.</li>
+                                    <li><strong>Units:</strong> Metric (м) / Imperial (ft). Ввод: <code>5.5</code>, <code>5.5m</code>, <code>550cm</code>, <code>18' 0.5"</code>, <code>18ft</code>.</li>
+                                    <li><strong>Room is sealed:</strong> влияет на нулевую/НЧ-моду.</li>
+                                    <li><strong>Sim end (150–500 Гц):</strong> верхняя граница расчёта (фактический потолок ограничен порядком моды 20).</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 3: Поглощение и сводка -->
+                            <div class="premium-card card-fuchsia">
+                                <h4>🔇 Поглощение и сводка</h4>
+                                <ul class="premium-list">
+                                    <li><strong>6 границ:</strong> Front / Back / Left / Right / Floor / Ceiling — значение 0.01…0.99 через ползунок или поле.</li>
+                                    <li><strong>Volume:</strong> объём в м³ или ft³.</li>
+                                    <li><strong>RT60 (Sabine):</strong> оценочное время реверберации в секундах.</li>
+                                    <li><strong>Schroeder:</strong> частота Шрёдера в Гц.</li>
+                                    <li><strong>modes ≤ end:</strong> число расчётных мод до верхней частоты симуляции.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 4: Виды и Pressure map -->
+                            <div class="premium-card card-blue">
+                                <h4>🗺 Виды и карта давления</h4>
+                                <ul class="premium-list">
+                                    <li><strong>3D view:</strong> вращение — ЛКМ по пустому месту; ⟲ сбрасывает камеру.</li>
+                                    <li><strong>Plan и Elevation:</strong> вид сверху и сбоку; внизу — галочки Show 3D view / Show Elevation View.</li>
+                                    <li><strong>Pressure map:</strong> наложение карты звукового давления на плане и в 3D (на высоте главного слушателя). Частота — ползунком рядом с чекбоксом или кликом по АЧХ.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 5: Перемещение объектов -->
+                            <div class="premium-card card-orange">
+                                <h4>🎯 Перемещение акустики, слушателя и микрофонов</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Мышью:</strong> наведите объект (источник, M, ML/MR/MF/MB/MU/MD) — подсветится с подсказкой (координаты, задержка полёта звука, угол L↔R); тяните ЛКМ.</li>
+                                    <li><strong>Shift:</strong> фиксирует движение по одной оси в 2D или по высоте (Z) в 3D.</li>
+                                    <li><strong>ПКМ:</strong> поворот источника на −15° в плане.</li>
+                                    <li><strong>Клавиатура (объект подсвечен):</strong> ← → ↑ ↓ — точный сдвиг (Shift ×10); <strong>R</strong> = −15°, <strong>L</strong> = +15°.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 6: АЧХ, Ref, пресеты -->
+                            <div class="premium-card card-green">
+                                <h4>📈 График АЧХ, Ref и пресеты</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Кривые:</strong> Main (M), Left, Right, Front, Back, Up, Down и Ref (опорная). При наведении на источник добавляется пунктирная оранжевая кривая вклада в Main.</li>
+                                    <li><strong>Модовые линии:</strong> вертикальные на фоне, настраиваются во вкладке Modal Resonance Lines.</li>
+                                    <li><strong>#gread:</strong> частота, уровень Main в дБ и ближайшая мода при наведении на график.</li>
+                                    <li><strong>Min / Max SPL:</strong> вертикальный диапазон оси дБ.</li>
+                                    <li><strong>Пресеты 1–5:</strong> Save to… → выбор номера; сохраняют комнату, источники, микрофоны, кроссовер, задержки и комментарий.</li>
+                                    <li><strong>Set Ref / ✕:</strong> сохранить текущую Main как Ref / очистить.</li>
+                                    <li><strong>📷:</strong> PNG панели видов (room-panel.png) или графика (room-response.png).</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 7: Нижние вкладки — часть 1 -->
+                            <div class="premium-card card-purple">
+                                <h4>🧩 Нижние вкладки: Modal Resonance Lines / Microphone Positions</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Modal Resonance Lines:</strong> вкл/выкл Axial (по длине/ширине/высоте), Tangential, Oblique; ползунок Transparency; список самых низких мод с частотами.</li>
+                                    <li><strong>Main listening position (head):</strong> From left wall, From front wall, Height.</li>
+                                    <li><strong>Additional positions:</strong> включение микрофонов Left/Right/Front/Back/Up/Down и их смещения (L/R, F/B, Up/Down).</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 8: Нижние вкладки — часть 2 -->
+                            <div class="premium-card card-red">
+                                <h4>🔊 Speaker Controls / Speaker Positions</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Каналы:</strong> L, R, C, LS, RS; сабвуферы Subs (0–8); Crossover filter: Off или 40–120 Гц; <em>Subs have same delay</em>.</li>
+                                    <li><strong>Быстрая расстановка (Subs to:):</strong> 4 corners, Wall midpoints, Front corners, Front/back mids, Corners + mids.</li>
+                                    <li><strong>Быстрое центрирование (Head:):</strong> Centre across width / Centre between speakers.</li>
+                                    <li><strong>Симметрия:</strong> Move right when left moved; Keep left and right symmetric.</li>
+                                    <li><strong>Show Anechoic Responses:</strong> расчёт без комнатных мод.</li>
+                                    <li><strong>Time align at Main / Align subs individually / Zero delays:</strong> выравнивание по времени прихода в Main.</li>
+                                    <li><strong>Таблица источников:</strong> Distance, Time of flight, LF ext (Hz), Delay (ms), Gain (dB), Invert.</li>
+                                    <li><strong>Speaker Positions:</strong> точные From left wall / From front wall / Height / Rotation° (0° — к задней стене) для каждого активного источника.</li>
+                                </ul>
+                            </div>
+
+                            <!-- Карта 9: Generate measurements + ссылка -->
+                            <div class="premium-card card-cyan">
+                                <h4>📐 Generate measurements</h4>
+                                <ul class="premium-list">
+                                    <li><strong>Combined response at Main mic posn:</strong> суммарный отклик всех активных источников в Main (с фазой).</li>
+                                    <li><strong>Combined at selected mic posns:</strong> усреднение по энергии по всем выбранным точкам (с min/max диапазоном).</li>
+                                    <li><strong>Individual at Main:</strong> отдельные кривые каждого источника в Main.</li>
+                                    <li><strong>Individual at selected posns:</strong> отдельные усреднённые кривые по выбранным точкам для каждого источника.</li>
+                                    <li><strong>Окно Measurements:</strong> переключение записей, Phase, Show room panel, Delete, Export .txt (формат <code>Freq(Hz) SPL(dB) Phase(degrees)</code> с метаданными).</li>
+                                </ul>
+                                <a href="RoomSim3D.html" class="roomsim-btn" style="margin: 1.5rem 0 0; align-self: flex-start;">
+                                    🎧 Открыть Room Simulator 3D →
+                                </a>
+                            </div>
+
+                        </div>
+                    </div>
+                    <!-- /МОДУЛЬ 5 -->
+                    <!-- ===== СТАТЬИ И ОБЗОРЫ ===== -->
+<div class="module-section" id="articles">
+    <h3 class="module-title">📚 СТАТЬИ И ОБЗОРЫ</h3>
+    <p class="module-desc">Глубокие материалы и практические руководства от команды AudioLab Pro.</p>
+
+    <div class="premium-grid">
+
+        <!-- Гид по сабвуферам -->
+        <div class="premium-card card-orange">
+            <h4>🔊 Исчерпывающий гид по сабвуферам для домашнего кинотеатра</h4>
+            <ul class="premium-list">
+                <li><strong>Топ-12 моделей 2026 года для рынка РФ:</strong> честный отбор по стандарту CEA-2010 — только сабвуферы с реальным пиковым давлением от <strong>115 дБ</strong> и глубиной от 14–18 Гц. Никаких маркетинговых «1000 Вт в пике» на 2-дюймовой катушке.</li>
+                <li><strong>Интерактивная АЧХ (CEA-2010):</strong> двигайте ползунок целевого SPL — кривая каждой модели покажет, где она держит давление, а где уходит в компрессию (пунктир). Наглядно видно, почему 12" за 90 000 ₽ иногда «рвёт» 15" за 300 000 ₽.</li>
+                <li><strong>Сводная таблица со сортировкой и фильтрами:</strong> тип оформления (ФИ/ЗЯ), размер динамика и звуковой катушки, RMS/Peak-мощность, габариты, вес, индекс «цена / отдача» и актуальная розница РФ.</li>
+                <li><strong>Умный калькулятор комнаты:</strong> вводите площадь, высоту потолков, дистанцию до дивана и бюджет — алгоритм с учётом рум-гейна и спада давления по расстоянию подберёт 3 оптимальные модели под ваш сценарий (музыка / кино / инфразвук).</li>
+                <li><strong>Аналитика и графики:</strong> бар-чарт «отдача на 20 Гц против 40 Гц» (главный тест для кинотеатра) и scatter-матрица «SPL vs цена» — сразу видно, какие модели выше линии тренда.</li>
+                <li><strong>Чек-лист инженера:</strong> 4 шага, как раскрыть 100% потенциала мощного сабвуфера — угловое размещение и борьба с комнатными модами, выбор частоты среза, согласование фазы и задержки, виброразвязка корпуса.</li>
+            </ul>
+            <a href="SubBENCHMARK2026.html" class="roomsim-btn" style="margin: 1.5rem 0 0; align-self: flex-start;">
+                📖 Открыть SubBENCHMARK 2026 →
+            </a>
+        </div>
+
+    </div>
+</div>
+<!-- /СТАТЬИ И ОБЗОРЫ -->
                 </div>
             </div>
         </section>
@@ -2051,14 +2199,21 @@
 </main>
 <script>
 
-/* ========== АВТОСКРЫТИЕ ШАПКИ ========== */
+/* ========== АВТОСКРЫТИЕ ШАПКИ: home=видна всегда, остальные=скрывается ========== */
 (function () {
     const header  = document.getElementById('mainHeader');
     const hotzone = document.getElementById('headerHotzone');
     if (!header || !hotzone) return;
 
+    const isTouch = matchMedia('(hover: none)').matches || ('ontouchstart' in window);
     let hideTimer = null;
-    let pinned    = false; // «пришпилить» шапку (см. window.__headerPin ниже)
+    let pinned    = false;
+
+    /* Текущая вкладка = 'home'? */
+    function isHomeActive() {
+        const activeBtn = document.querySelector('.tab-btn.active');
+        return activeBtn && activeBtn.dataset.tab === 'home';
+    }
 
     function showHeader() {
         clearTimeout(hideTimer);
@@ -2066,28 +2221,100 @@
     }
 
     function scheduleHide(delay = 700) {
-        if (pinned) return;
+        if (pinned || isHomeActive()) return;   // ← главное правило
         clearTimeout(hideTimer);
         hideTimer = setTimeout(() => header.classList.add('header--hidden'), delay);
     }
 
-    // Наведение на саму шапку — показываем; уход — прячем с задержкой
-    header.addEventListener('mouseenter', showHeader);
-    header.addEventListener('mouseleave', () => scheduleHide());
-
-    // Мышь у верхнего края экрана — показываем; ушла — прячем
-    hotzone.addEventListener('mouseenter', showHeader);
-    hotzone.addEventListener('mouseleave', () => scheduleHide());
-
-    // Показать на старте и спрятать через 2.5с бездействия
-    showHeader();
-    scheduleHide(2500);
-
-    // Публичный хелпер: можно «пришпилить» шапку на время работы с ней
     window.__headerPin = (state) => {
         pinned = !!state;
         pinned ? showHeader() : scheduleHide();
     };
+
+    /* === ХУК НА ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ===
+       setTimeout(0), чтобы сначала отработал основной обработчик,
+       который переставляет .active, и isHomeActive() увидел новое состояние. */
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            setTimeout(() => {
+                showHeader();
+                if (isHomeActive()) {
+                    clearTimeout(hideTimer);       // на главной — не прячем никогда
+                } else {
+                    scheduleHide(1200);            // на других — спрячем через 1.2 сек
+                }
+            }, 0);
+        });
+    });
+
+    /* ---------- ДЕСКТОП ---------- */
+    if (!isTouch) {
+        header.addEventListener('mouseenter', showHeader);
+        header.addEventListener('mouseleave', () => scheduleHide());
+
+        hotzone.addEventListener('mouseenter', showHeader);
+        hotzone.addEventListener('mouseleave', () => scheduleHide());
+
+        showHeader();
+        scheduleHide(2500);        // на home не сработает из-за проверки
+        return;
+    }
+
+    /* ---------- ТАЧ ---------- */
+    showHeader();
+
+    let lastY = window.scrollY;
+    let ticking = false;
+
+    function onScroll() {
+        const y = window.scrollY;
+        const delta = y - lastY;
+
+        // На главной шапка не прячется при скролле
+        if (isHomeActive()) {
+            header.classList.remove('header--hidden');
+            lastY = y;
+            ticking = false;
+            return;
+        }
+
+        if (Math.abs(delta) < 8) { ticking = false; return; }
+
+        if (delta > 0 && y > 80) {
+            header.classList.add('header--hidden');
+        } else if (delta < 0) {
+            header.classList.remove('header--hidden');
+        }
+        lastY = y;
+        ticking = false;
+    }
+
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            requestAnimationFrame(onScroll);
+            ticking = true;
+        }
+    }, { passive: true });
+
+    hotzone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        showHeader();
+    }, { passive: false });
+
+    /* Мобильное меню: пока открыто — шапку не прячем */
+    const navTabs    = document.getElementById('navTabs');
+    const menuToggle = document.getElementById('menuToggle');
+    if (navTabs && menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            showHeader();
+            window.__headerPin(true);
+        });
+        document.addEventListener('click', (e) => {
+            if (!navTabs.classList.contains('active')) {
+                window.__headerPin(false);
+            }
+        }, true);
+    }
 })();
 
 /* ========== ЛЕНИВАЯ ЗАГРУЗКА IFRAME ROOMSIM3D ========== */
